@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Light Mode -->
+    <color name="color_primary_light">#2FA3A3</color>
+    <color name="color_on_primary_light">#FFFFFF</color>
+    <color name="color_background_light">#FFFFFF</color>
+    <color name="color_on_background_light">#000000</color>
+    <color name="status_bar_light">#B48DAA</color>
+    <color name="nav_bar_light">#FFFFFF</color>
+
+    <!-- Dark Mode -->
+    <color name="color_primary_dark">#2FA3A3</color>
+    <color name="color_on_primary_dark">#000000</color>
+    <color name="color_background_dark">#121212</color>
+    <color name="color_on_background_dark">#FFFFFF</color>
+    <color name="status_bar_dark">#121212</color>
+    <color name="nav_bar_dark">#000000</color>
+</resources>

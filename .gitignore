@@ -1,0 +1,38 @@
+# Android Studio / IntelliJ
+*.iml
+.idea/
+!.idea/codeStyles  # păstrează stilurile de cod dacă vrei
+.DS_Store
+
+# Gradle
+.gradle/
+build/
+*/build/
+out/
+
+# Local config
+local.properties
+
+# NDK / CMake / Native
+.cxx/
+externalNativeBuild/
+
+# Log / Captures
+captures/
+*.log
+
+# OS-specific
+Thumbs.db
+ehthumbs.db
+
+# Android generated
+generated/
+bin/
+gen/
+
+# APK / AAB / Keystore
+*.apk
+*.ap_
+*.aab
+*.jks
+*.keystore

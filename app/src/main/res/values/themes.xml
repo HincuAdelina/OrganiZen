@@ -1,0 +1,22 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.OrganiZen" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary colors -->
+        <item name="colorPrimary">@color/color_primary_light</item>
+        <item name="colorOnPrimary">@color/color_on_primary_light</item>
+        <item name="android:colorBackground">@color/color_background_light</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/status_bar_light</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">@color/nav_bar_light</item>
+    </style>
+
+    <!-- Splash theme -->
+    <style name="Theme.OrganiZen.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/status_bar_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.OrganiZen</item>
+    </style>
+</resources>
