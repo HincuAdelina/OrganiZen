@@ -1,20 +1,21 @@
 package com.organizen.app
 
+import android.annotation.SuppressLint
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.compose.rememberNavController
+import com.organizen.app.auth.AuthViewModel
+import com.organizen.app.navigation.AppNavGraph
+import com.organizen.app.theme.OrganiZenTheme
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
-
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
-        // 2) Mică animație pe icon când splash-ul dispare
+        // icon animation after splash screen
         splash.setOnExitAnimationListener { splashViewProvider ->
             val v = splashViewProvider.iconView
             v.animate()
@@ -25,11 +26,12 @@ class MainActivity : AppCompatActivity() {
                 .start()
         }
 
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        setContent {
+            OrganiZenTheme {
+                val navController = rememberNavController()
+                val vm = AuthViewModel()
+                AppNavGraph(navController, vm)
+            }
         }
     }
 }

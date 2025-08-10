@@ -36,3 +36,5 @@ gen/
 *.aab
 *.jks
 *.keystore
+
+app/google-services.json
