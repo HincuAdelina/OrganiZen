@@ -1,12 +1,16 @@
 package com.organizen.app.auth.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -15,12 +19,26 @@ import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.ui.ChatScreen
 import com.organizen.app.home.ui.HealthScreen
 import com.organizen.app.home.ui.TasksScreen
+import com.organizen.app.home.ui.ProfileDialog
 import com.organizen.app.navigation.BottomNavScreen
+import com.organizen.app.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
     val navController = rememberNavController()
+    var showProfile by remember { mutableStateOf(false) }
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = { showProfile = true }) {
+                        Image(painterResource(R.drawable.organizen_icon), contentDescription = "Profile")
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar {
                 val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -51,9 +69,15 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             startDestination = BottomNavScreen.Tasks.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomNavScreen.Tasks.route) { TasksScreen(vm, onLogout) }
+            composable(BottomNavScreen.Tasks.route) { TasksScreen(vm) }
             composable(BottomNavScreen.Health.route) { HealthScreen() }
             composable(BottomNavScreen.Chat.route) { ChatScreen() }
+        }
+    }
+    if (showProfile) {
+        ProfileDialog(vm, onDismiss = { showProfile = false }) {
+            showProfile = false
+            onLogout()
         }
     }
 }

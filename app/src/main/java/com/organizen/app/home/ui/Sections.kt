@@ -1,7 +1,6 @@
 package com.organizen.app.home.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -10,7 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.organizen.app.auth.AuthViewModel
 
 @Composable
-fun TasksScreen(vm: AuthViewModel, onLogout: () -> Unit) {
+fun TasksScreen(vm: AuthViewModel) {
     Column(
         Modifier
             .fillMaxSize()
@@ -18,12 +17,6 @@ fun TasksScreen(vm: AuthViewModel, onLogout: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("Welcome, ${vm.currentUser?.displayName ?: "User"}")
-        Button(onClick = {
-            vm.logout()
-            onLogout()
-        }) {
-            Text("Log Out")
-        }
     }
 }
 

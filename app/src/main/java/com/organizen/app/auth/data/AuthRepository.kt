@@ -30,4 +30,19 @@ class AuthRepository(
     }
 
     fun logout() = auth.signOut()
+
+    suspend fun updateName(name: String): Result<Unit> = try {
+        val profile = userProfileChangeRequest { displayName = name }
+        auth.currentUser?.updateProfile(profile)?.await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun updatePassword(password: String): Result<Unit> = try {
+        auth.currentUser?.updatePassword(password)?.await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
 }
