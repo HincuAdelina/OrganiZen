@@ -28,6 +28,12 @@ class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewM
         }
     }
 
+    fun updateEmail(email: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            onResult(repo.updateEmail(email).isSuccess)
+        }
+    }
+
     fun updatePassword(password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             onResult(repo.updatePassword(password).isSuccess)

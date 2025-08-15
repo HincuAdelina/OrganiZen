@@ -39,6 +39,13 @@ class AuthRepository(
         Result.failure(e)
     }
 
+    suspend fun updateEmail(email: String): Result<Unit> = try {
+        auth.currentUser?.updateEmail(email)?.await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     suspend fun updatePassword(password: String): Result<Unit> = try {
         auth.currentUser?.updatePassword(password)?.await()
         Result.success(Unit)
