@@ -19,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -112,11 +111,18 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .alpha(if (task.completed) 0.5f else 1f)
             .clickable { onClick() },
-        border = if (overdue) BorderStroke(1.dp, Color.Red) else null
+        border = if (overdue) BorderStroke(1.dp, Color.Red) else null,
+        colors = CardDefaults.cardColors(
+            containerColor = if (task.completed) Color.LightGray else MaterialTheme.colorScheme.surface
+        )
     ) {
-        Box(Modifier.fillMaxWidth().padding(8.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp)
+                .padding(8.dp)
+        ) {
             Checkbox(
                 checked = task.completed,
                 onCheckedChange = onCheckedChange,
@@ -132,7 +138,11 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                     Spacer(Modifier.width(4.dp))
                     Text(
                         task.description,
-                        color = if (overdue) Color.Red else Color.Unspecified
+                        color = when {
+                            overdue -> Color.Red
+                            task.completed -> Color.Gray
+                            else -> Color.Unspecified
+                        }
                     )
                 }
                 Spacer(Modifier.height(4.dp))
