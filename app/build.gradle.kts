@@ -102,6 +102,7 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.material)
 
     // Splash Screen API
     implementation(libs.androidx.core.splashscreen)
