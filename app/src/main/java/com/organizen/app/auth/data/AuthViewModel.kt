@@ -8,21 +8,17 @@ import kotlinx.coroutines.launch
 class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewModel() {
     val currentUser get() = repo.currentUser
 
-    fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    fun login(email: String, password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = repo.login(email, password)
-            onResult(result.isSuccess, result.exceptionOrNull()?.message)
+            onResult(repo.login(email, password).isSuccess)
         }
     }
 
-    fun register(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    fun register(name: String, email: String, password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = repo.register(email, password)
-            onResult(result.isSuccess, result.exceptionOrNull()?.message)
+            onResult(repo.register(name, email, password).isSuccess)
         }
     }
 
-    fun logout() {
-        repo.logout()
-    }
+    fun logout() = repo.logout()
 }

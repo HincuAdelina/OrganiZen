@@ -17,7 +17,7 @@ fun TasksScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Welcome, ${vm.currentUser?.email ?: "User"}")
+        Text("Welcome, ${vm.currentUser?.displayName ?: "User"}")
         Button(onClick = {
             vm.logout()
             onLogout()

@@ -15,8 +15,10 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onGoToLogin: () -> Unit
 ) {
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -27,29 +29,44 @@ fun RegisterScreen(
     ) {
         Text("Register", style = MaterialTheme.typography.headlineMedium)
 
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = name, onValueChange = { name = it },
+            label = { Text("Name") }, modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = email, onValueChange = { email = it },
+            label = { Text("Email") }, modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = password, onValueChange = { password = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = confirmPassword, onValueChange = { confirmPassword = it },
+            label = { Text("Confirm Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
         )
 
         error?.let { Text(it, color = Color.Red) }
 
         Button(
             onClick = {
-                vm.register(email, password) { success, msg ->
-                    if (success) onRegisterSuccess() else error = msg
+                if (name.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                    error = "Something is incorrect"; return@Button
+                }
+                if (password != confirmPassword) {
+                    error = "Passwords do not match"; return@Button
+                }
+                vm.register(name, email, password) { success ->
+                    if (success) onRegisterSuccess() else error = "Something is incorrect"
                 }
             },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Sign Up")
-        }
+        ) { Text("Sign Up") }
 
-        TextButton(onClick = onGoToLogin) {
-            Text("Already have an account? Login")
-        }
+        TextButton(onClick = onGoToLogin) { Text("Already have an account? Login") }
     }
 }

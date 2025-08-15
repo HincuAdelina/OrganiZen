@@ -1,6 +1,7 @@
 package com.organizen.app.auth.data
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.userProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
@@ -8,25 +9,25 @@ class AuthRepository(
 ) {
     val currentUser get() = auth.currentUser
 
-    suspend fun login(email: String, password: String): Result<Unit> {
-        return try {
-            auth.signInWithEmailAndPassword(email, password).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    suspend fun login(email: String, password: String): Result<Unit> = try {
+        auth.signInWithEmailAndPassword(email, password).await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
-    suspend fun register(email: String, password: String): Result<Unit> {
-        return try {
-            auth.createUserWithEmailAndPassword(email, password).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    suspend fun register(name: String, email: String, password: String): Result<Unit> = try {
+        // 1) Creează contul
+        auth.createUserWithEmailAndPassword(email, password).await()
+
+        // 2) Setează displayName în profil
+        val profile = userProfileChangeRequest { displayName = name }
+        auth.currentUser?.updateProfile(profile)?.await()
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
-    fun logout() {
-        auth.signOut()
-    }
+    fun logout() = auth.signOut()
 }

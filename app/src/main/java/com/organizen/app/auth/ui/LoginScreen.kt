@@ -27,29 +27,31 @@ fun LoginScreen(
     ) {
         Text("Login", style = MaterialTheme.typography.headlineMedium)
 
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = email, onValueChange = { email = it },
+            label = { Text("Email") }, modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = password, onValueChange = { password = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
         )
 
         error?.let { Text(it, color = Color.Red) }
 
         Button(
             onClick = {
-                vm.login(email, password) { success, msg ->
-                    if (success) onLoginSuccess() else error = msg
+                if (email.isBlank() || password.isBlank()) {
+                    error = "Something is incorrect"; return@Button
+                }
+                vm.login(email, password) { success ->
+                    if (success) onLoginSuccess() else error = "Something is incorrect"
                 }
             },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Log In")
-        }
+        ) { Text("Log In") }
 
-        TextButton(onClick = onGoToRegister) {
-            Text("Don't have an account? Register")
-        }
+        TextButton(onClick = onGoToRegister) { Text("Don't have an account? Sign Up") }
     }
 }
