@@ -103,6 +103,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.navigation.compose)
     implementation(libs.material)
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha08")
 
     // Splash Screen API
     implementation(libs.androidx.core.splashscreen)
