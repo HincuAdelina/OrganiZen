@@ -47,17 +47,18 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         val list = mutableListOf<Task>()
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
-            val tagsArr = o.getJSONArray("tags")
-            val tags = mutableListOf<Tag>()
-            for (j in 0 until tagsArr.length()) {
-                tags += Tag.valueOf(tagsArr.getString(j))
+            val category = if (o.has("category")) {
+                Category.valueOf(o.getString("category"))
+            } else {
+                val tagsArr = o.getJSONArray("tags")
+                if (tagsArr.length() > 0) Category.valueOf(tagsArr.getString(0)) else Category.LIFESTYLE
             }
             list += Task(
                 id = o.getLong("id"),
                 description = o.getString("description"),
                 difficulty = Difficulty.valueOf(o.getString("difficulty")),
                 estimatedMinutes = o.getInt("estimatedMinutes"),
-                tags = tags,
+                category = category,
                 deadline = LocalDate.parse(o.getString("deadline")),
                 completed = o.getBoolean("completed")
             )
@@ -73,9 +74,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             o.put("description", task.description)
             o.put("difficulty", task.difficulty.name)
             o.put("estimatedMinutes", task.estimatedMinutes)
-            val tagsArr = JSONArray()
-            task.tags.forEach { tagsArr.put(it.name) }
-            o.put("tags", tagsArr)
+            o.put("category", task.category.name)
             o.put("deadline", task.deadline.toString())
             o.put("completed", task.completed)
             arr.put(o)
