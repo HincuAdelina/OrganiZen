@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.organizen.app"
-        minSdk = 24
+        minSdk = 34
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -119,6 +119,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
 //    implementation(libs.google.firebase.auth.ktx)
 //    implementation(libs.google.firebase.auth.ktx)
+
+    // Add a dependency of Health Connect SDK
+    implementation (libs.androidx.connect.client)
 
 //    // Teste
     testImplementation(libs.junit)
