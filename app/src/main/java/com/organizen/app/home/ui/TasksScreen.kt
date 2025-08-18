@@ -210,23 +210,19 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Unit) {
-    var description by remember { mutableStateOf(task?.description ?: "") }
-    var estimated by remember { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
-    var difficulty by remember { mutableStateOf(task?.difficulty ?: Difficulty.EASY) }
-    var selectedCategory by remember { mutableStateOf(task?.category ?: Category.DAILY) }
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = task?.deadline?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
-    )
+    var description by remember(task) { mutableStateOf(task?.description ?: "") }
+    var estimated by remember(task) { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
+    var difficulty by remember(task) { mutableStateOf(task?.difficulty ?: Difficulty.EASY) }
+    var selectedCategory by remember(task) { mutableStateOf(task?.category ?: Category.DAILY) }
+    var deadline by remember(task) { mutableStateOf(task?.deadline ?: LocalDate.now()) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 val minutes = estimated.toIntOrNull()
-                val date = datePickerState.selectedDateMillis?.let {
-                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                }
-                if (description.isNotBlank() && minutes != null && date != null) {
+                if (description.isNotBlank() && minutes != null) {
                     onSave(
                         Task(
                             id = task?.id ?: System.currentTimeMillis(),
@@ -234,7 +230,7 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                             difficulty = difficulty,
                             estimatedMinutes = minutes,
                             category = selectedCategory,
-                            deadline = date,
+                            deadline = deadline,
                             completed = task?.completed ?: false
                         )
                     )
@@ -257,7 +253,15 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                     onValueChange = { estimated = it },
                     label = { Text("Estimated minutes") }
                 )
-                DatePicker(state = datePickerState)
+                OutlinedTextField(
+                    value = deadline.toString(),
+                    onValueChange = {},
+                    label = { Text("Deadline") },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                )
                 Text("Difficulty")
                 Row {
                     Difficulty.values().forEach { d ->
@@ -283,4 +287,26 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
             }
         }
     )
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = deadline.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        deadline = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
