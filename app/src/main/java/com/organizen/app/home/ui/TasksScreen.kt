@@ -2,7 +2,6 @@ package com.organizen.app.home.ui
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.auth.AuthViewModel
@@ -101,7 +99,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                                 contentAlignment = Alignment.CenterEnd
                             )
                             {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.padding(8.dp))
                             }
                         }
 
@@ -201,6 +199,13 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 onCheckedChange = onCheckedChange,
                 modifier = Modifier.align(Alignment.CenterStart)
             )
+            categoryIcons[task.category]?.let { icon ->
+                Icon(
+                    icon,
+                    contentDescription = task.category.name,
+                    modifier = Modifier.size(16.dp).align(Alignment.BottomStart)
+                )
+            }
             Column(
                 Modifier
                     .align(Alignment.CenterStart)
@@ -224,16 +229,11 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                     )
                 }
                 Spacer(Modifier.height(4.dp))
-                categoryIcons[task.category]?.let { icon ->
-                    Icon(
-                        icon,
-                        contentDescription = task.category.name,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+
             }
             Text(
                 task.category.name.lowercase().replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.align(Alignment.TopStart)
             )
             Row(
@@ -322,7 +322,7 @@ private fun TaskDialog(
                 )
                 Box(
                     modifier = Modifier
-//                        .padding(padding)
+//                        .padding(8.dp)
                         .fillMaxWidth()
                 ) {
                     OutlinedTextField(
