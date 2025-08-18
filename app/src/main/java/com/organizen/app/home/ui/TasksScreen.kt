@@ -196,21 +196,6 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 .heightIn(min = 100.dp)
                 .padding(8.dp)
         ) {
-            if (overdue) {
-                Canvas(modifier = Modifier.matchParentSize()) {
-                    val spacing = 20.dp.toPx()
-                    var x = -size.height
-                    while (x < size.width) {
-                        drawLine(
-                            color = Color.Red,
-                            start = Offset(x, 0f),
-                            end = Offset(x + size.height, size.height),
-                            strokeWidth = 2.dp.toPx()
-                        )
-                        x += spacing
-                    }
-                }
-            }
             Checkbox(
                 checked = task.completed,
                 onCheckedChange = onCheckedChange,
