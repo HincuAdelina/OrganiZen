@@ -4,30 +4,36 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.FractionalThreshold
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberSwipeableState
+import androidx.compose.foundation.gestures.swipeable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material.DismissDirection
-import androidx.compose.material.DismissValue
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.SwipeToDismiss
-import androidx.compose.material.rememberDismissState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
     val userId = vm.currentUser?.uid ?: "guest"
@@ -48,34 +54,39 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                 .padding(16.dp)
         ) {
             items(tasks, key = { it.id }) { task ->
-                val dismissState = rememberDismissState { value ->
-                    if (value == DismissValue.DismissedToStart) {
-                        tasksVm.removeTask(userId, task.id)
-                    }
-                    true
-                }
-                SwipeToDismiss(
-                    state = dismissState,
-                    directions = setOf(DismissDirection.EndToStart),
-                    background = {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(Color.Red.copy(alpha = 0.3f))
-                                .padding(16.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
+                val swipeState = rememberSwipeableState(0)
+                val scope = rememberCoroutineScope()
+                val deleteSize = 72.dp
+                val deletePx = with(LocalDensity.current) { deleteSize.toPx() }
+                Box(
+                    Modifier
+                        .padding(vertical = 4.dp)
+                        .swipeable(
+                            state = swipeState,
+                            anchors = mapOf(0f to 0, -deletePx to 1),
+                            thresholds = { _, _ -> FractionalThreshold(0.3f) },
+                            orientation = Orientation.Horizontal
+                        )
+                ) {
+                    Box(
+                        Modifier
+                            .matchParentSize(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        IconButton(onClick = {
+                            tasksVm.removeTask(userId, task.id)
+                            scope.launch { swipeState.animateTo(0) }
+                        }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
-                    },
-                    dismissContent = {
-                        TaskCard(
-                            task = task,
-                            onCheckedChange = { done -> tasksVm.setDone(userId, task.id, done) },
-                            onClick = { editingTask = task; showDialog = true }
-                        )
                     }
-                )
+                    TaskCard(
+                        task = task,
+                        onCheckedChange = { done -> tasksVm.setDone(userId, task.id, done) },
+                        onClick = { editingTask = task; showDialog = true },
+                        modifier = Modifier.offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
+                    )
+                }
             }
         }
     }
@@ -95,26 +106,36 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit) {
+private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val overdue = task.deadline.isBefore(LocalDate.now()) && !task.completed
+    val dueToday = task.deadline.isEqual(LocalDate.now()) && !task.completed
     val difficultyColor = when (task.difficulty) {
         Difficulty.EASY -> Color.Green
         Difficulty.MEDIUM -> Color.Yellow
         Difficulty.HARD -> Color.Red
     }
-    val tagIcons = mapOf(
-        Tag.RELAXARE to Icons.Default.SelfImprovement,
-        Tag.INVATARE to Icons.Default.School,
-        Tag.SPORT to Icons.Default.FitnessCenter
+    val categoryIcons = mapOf(
+        Category.SPORT to Icons.Default.FitnessCenter,
+        Category.DAILY to Icons.Default.Home,
+        Category.LEARNING to Icons.Default.School
+    )
+    val categoryColors = mapOf(
+        Category.SPORT to Color(0xFFD0F0FD),
+        Category.DAILY to Color(0xFFFFF9C4),
+        Category.LEARNING to Color(0xFFE8EAF6)
+    )
+    val hashedBrush = Brush.linearGradient(
+        colors = listOf(Color.Red.copy(alpha = 0.3f), Color.Transparent),
+        start = Offset.Zero,
+        end = Offset(10f, 10f),
+        tileMode = TileMode.Repeated
     )
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
             .clickable { onClick() },
-        border = if (overdue) BorderStroke(1.dp, Color.Red) else null,
         colors = CardDefaults.cardColors(
-            containerColor = if (task.completed) Color.LightGray else MaterialTheme.colorScheme.surface
+            containerColor = if (task.completed) Color.LightGray else categoryColors[task.category] ?: MaterialTheme.colorScheme.surface
         )
     ) {
         Box(
@@ -123,6 +144,13 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 .heightIn(min = 100.dp)
                 .padding(8.dp)
         ) {
+            if (overdue) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(hashedBrush)
+                )
+            }
             Checkbox(
                 checked = task.completed,
                 onCheckedChange = onCheckedChange,
@@ -136,6 +164,10 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Circle, contentDescription = null, tint = difficultyColor, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
+                    if (dueToday) {
+                        Icon(Icons.Default.PriorityHigh, contentDescription = "Due today", tint = Color.Red, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                    }
                     Text(
                         task.description,
                         color = when {
@@ -147,15 +179,13 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 }
                 Spacer(Modifier.height(4.dp))
                 Row {
-                    task.tags.forEach { tag ->
-                        tagIcons[tag]?.let { icon ->
-                            Icon(icon, contentDescription = tag.name, modifier = Modifier.size(16.dp).padding(end = 4.dp))
-                        }
+                    categoryIcons[task.category]?.let { icon ->
+                        Icon(icon, contentDescription = task.category.name, modifier = Modifier.size(24.dp))
                     }
                 }
             }
             Text(
-                task.tags.firstOrNull()?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "",
+                task.category.name.lowercase().replaceFirstChar { it.uppercase() },
                 modifier = Modifier.align(Alignment.TopStart)
             )
             Row(
@@ -181,24 +211,25 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
 private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Unit) {
     var description by remember { mutableStateOf(task?.description ?: "") }
     var estimated by remember { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
-    var deadline by remember { mutableStateOf(task?.deadline?.toString() ?: "") }
+    var deadlineDate by remember { mutableStateOf(task?.deadline ?: LocalDate.now()) }
+    var showDatePicker by remember { mutableStateOf(false) }
     var difficulty by remember { mutableStateOf(task?.difficulty ?: Difficulty.EASY) }
-    val selectedTags = remember { mutableStateListOf<Tag>().apply { addAll(task?.tags ?: emptyList()) } }
+    var category by remember { mutableStateOf(task?.category ?: Category.DAILY) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 val minutes = estimated.toIntOrNull()
-                val date = runCatching { LocalDate.parse(deadline) }.getOrNull()
-                if (description.isNotBlank() && minutes != null && date != null) {
+                val date = deadlineDate
+                if (description.isNotBlank() && minutes != null) {
                     onSave(
                         Task(
                             id = task?.id ?: System.currentTimeMillis(),
                             description = description,
                             difficulty = difficulty,
                             estimatedMinutes = minutes,
-                            tags = selectedTags.toList(),
+                            category = category,
                             deadline = date,
                             completed = task?.completed ?: false
                         )
@@ -222,10 +253,12 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                     onValueChange = { estimated = it },
                     label = { Text("Estimated minutes") }
                 )
-                TextField(
-                    value = deadline,
-                    onValueChange = { deadline = it },
-                    label = { Text("Deadline (YYYY-MM-DD)") }
+                OutlinedTextField(
+                    value = deadlineDate.toString(),
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.clickable { showDatePicker = true },
+                    label = { Text("Deadline") }
                 )
                 Text("Difficulty")
                 Row {
@@ -238,15 +271,13 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                         Spacer(Modifier.width(4.dp))
                     }
                 }
-                Text("Tags")
+                Text("Category")
                 Row {
-                    Tag.values().forEach { tag ->
+                    Category.values().forEach { c ->
                         FilterChip(
-                            selected = selectedTags.contains(tag),
-                            onClick = {
-                                if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(tag)
-                            },
-                            label = { Text(tag.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            selected = category == c,
+                            onClick = { category = c },
+                            label = { Text(c.name.lowercase().replaceFirstChar { it.uppercase() }) }
                         )
                         Spacer(Modifier.width(4.dp))
                     }
@@ -254,4 +285,25 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
             }
         }
     )
+
+    if (showDatePicker) {
+        val dateState = rememberDatePickerState(initialSelectedDateMillis = deadlineDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val millis = dateState.selectedDateMillis
+                    if (millis != null) {
+                        deadlineDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = dateState)
+        }
+    }
 }
