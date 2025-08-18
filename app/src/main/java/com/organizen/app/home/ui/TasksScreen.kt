@@ -4,10 +4,11 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.FractionalThreshold
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.rememberSwipeableState
-import androidx.compose.foundation.gestures.swipeable
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.at
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.*
@@ -54,17 +56,26 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                 .padding(16.dp)
         ) {
             items(tasks, key = { it.id }) { task ->
-                val swipeState = rememberSwipeableState(0)
+                val density = LocalDensity.current
+                val dragState = remember(density) {
+                    AnchoredDraggableState(
+                        initialValue = 0,
+                        positionalThreshold = { distance: Float -> distance * 0.3f },
+                        velocityThreshold = { with(density) { 100.dp.toPx() } }
+                    )
+                }
                 val scope = rememberCoroutineScope()
                 val deleteSize = 72.dp
-                val deletePx = with(LocalDensity.current) { deleteSize.toPx() }
+                val deletePx = with(density) { deleteSize.toPx() }
                 Box(
                     Modifier
                         .padding(vertical = 4.dp)
-                        .swipeable(
-                            state = swipeState,
-                            anchors = mapOf(0f to 0, -deletePx to 1),
-                            thresholds = { _, _ -> FractionalThreshold(0.3f) },
+                        .anchoredDraggable(
+                            state = dragState,
+                            anchors = DraggableAnchors {
+                                0 at 0f
+                                1 at -deletePx
+                            },
                             orientation = Orientation.Horizontal
                         )
                 ) {
@@ -75,7 +86,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                     ) {
                         IconButton(onClick = {
                             tasksVm.removeTask(userId, task.id)
-                            scope.launch { swipeState.animateTo(0) }
+                            scope.launch { dragState.animateTo(0) }
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
@@ -84,7 +95,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                         task = task,
                         onCheckedChange = { done -> tasksVm.setDone(userId, task.id, done) },
                         onClick = { editingTask = task; showDialog = true },
-                        modifier = Modifier.offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
+                        modifier = Modifier.offset { IntOffset(dragState.offset.roundToInt(), 0) }
                     )
                 }
             }
