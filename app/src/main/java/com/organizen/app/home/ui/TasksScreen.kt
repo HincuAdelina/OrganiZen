@@ -7,7 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
@@ -24,6 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.*
+import com.organizen.app.theme.DailyColor
+import com.organizen.app.theme.LearningColor
+import com.organizen.app.theme.SportColor
+import java.time.ZoneId
+import java.time.Instant
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -96,31 +102,54 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit) {
-    val overdue = task.deadline.isBefore(LocalDate.now()) && !task.completed
+    val today = LocalDate.now()
+    val overdue = today.isAfter(task.deadline) && !task.completed
+    val dueToday = today.isEqual(task.deadline) && !task.completed
     val difficultyColor = when (task.difficulty) {
         Difficulty.EASY -> Color.Green
         Difficulty.MEDIUM -> Color.Yellow
         Difficulty.HARD -> Color.Red
     }
-    val tagIcons = mapOf(
-        Tag.RELAXARE to Icons.Default.SelfImprovement,
-        Tag.INVATARE to Icons.Default.School,
-        Tag.SPORT to Icons.Default.FitnessCenter
+    val categoryIcons = mapOf(
+        Category.SPORT to Icons.Default.FitnessCenter,
+        Category.DAILY to Icons.Default.Check,
+        Category.LEARNING to Icons.Default.School
     )
+    val categoryColors = mapOf(
+        Category.SPORT to SportColor,
+        Category.DAILY to DailyColor,
+        Category.LEARNING to LearningColor
+    )
+    val baseColor = if (task.completed) Color.LightGray else categoryColors[task.category] ?: MaterialTheme.colorScheme.surface
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable { onClick() },
-        border = if (overdue) BorderStroke(1.dp, Color.Red) else null,
-        colors = CardDefaults.cardColors(
-            containerColor = if (task.completed) Color.LightGray else MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 100.dp)
+                .background(baseColor)
+                .drawBehind {
+                    if (overdue) {
+                        val lineColor = Color.Red
+                        val step = 20.dp.toPx()
+                        var x = -size.height
+                        while (x < size.width) {
+                            drawLine(
+                                lineColor,
+                                Offset(x, 0f),
+                                Offset(x + size.height, size.height),
+                                strokeWidth = 4f
+                            )
+                            x += step
+                        }
+                    }
+                }
                 .padding(8.dp)
         ) {
             Checkbox(
@@ -147,21 +176,23 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 }
                 Spacer(Modifier.height(4.dp))
                 Row {
-                    task.tags.forEach { tag ->
-                        tagIcons[tag]?.let { icon ->
-                            Icon(icon, contentDescription = tag.name, modifier = Modifier.size(16.dp).padding(end = 4.dp))
-                        }
+                    categoryIcons[task.category]?.let { icon ->
+                        Icon(icon, contentDescription = task.category.name, modifier = Modifier.size(24.dp).padding(end = 4.dp))
                     }
                 }
             }
             Text(
-                task.tags.firstOrNull()?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "",
+                task.category.name.lowercase().replaceFirstChar { it.uppercase() },
                 modifier = Modifier.align(Alignment.TopStart)
             )
             Row(
                 modifier = Modifier.align(Alignment.TopEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (dueToday) {
+                    Icon(Icons.Default.PriorityHigh, contentDescription = "Due today", tint = Color.Red, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                }
                 Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(2.dp))
                 Text("${task.estimatedMinutes}m", style = MaterialTheme.typography.bodySmall)
@@ -181,16 +212,20 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
 private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Unit) {
     var description by remember { mutableStateOf(task?.description ?: "") }
     var estimated by remember { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
-    var deadline by remember { mutableStateOf(task?.deadline?.toString() ?: "") }
     var difficulty by remember { mutableStateOf(task?.difficulty ?: Difficulty.EASY) }
-    val selectedTags = remember { mutableStateListOf<Tag>().apply { addAll(task?.tags ?: emptyList()) } }
+    var selectedCategory by remember { mutableStateOf(task?.category ?: Category.DAILY) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = task?.deadline?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 val minutes = estimated.toIntOrNull()
-                val date = runCatching { LocalDate.parse(deadline) }.getOrNull()
+                val date = datePickerState.selectedDateMillis?.let {
+                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                }
                 if (description.isNotBlank() && minutes != null && date != null) {
                     onSave(
                         Task(
@@ -198,7 +233,7 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                             description = description,
                             difficulty = difficulty,
                             estimatedMinutes = minutes,
-                            tags = selectedTags.toList(),
+                            category = selectedCategory,
                             deadline = date,
                             completed = task?.completed ?: false
                         )
@@ -222,11 +257,7 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                     onValueChange = { estimated = it },
                     label = { Text("Estimated minutes") }
                 )
-                TextField(
-                    value = deadline,
-                    onValueChange = { deadline = it },
-                    label = { Text("Deadline (YYYY-MM-DD)") }
-                )
+                DatePicker(state = datePickerState)
                 Text("Difficulty")
                 Row {
                     Difficulty.values().forEach { d ->
@@ -238,15 +269,13 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                         Spacer(Modifier.width(4.dp))
                     }
                 }
-                Text("Tags")
+                Text("Category")
                 Row {
-                    Tag.values().forEach { tag ->
+                    Category.values().forEach { cat ->
                         FilterChip(
-                            selected = selectedTags.contains(tag),
-                            onClick = {
-                                if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(tag)
-                            },
-                            label = { Text(tag.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat },
+                            label = { Text(cat.name.lowercase().replaceFirstChar { it.uppercase() }) }
                         )
                         Spacer(Modifier.width(4.dp))
                     }

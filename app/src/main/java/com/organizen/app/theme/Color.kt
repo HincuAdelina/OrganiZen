@@ -9,3 +9,7 @@ val OnBgLight = Color(0xFF000000)
 
 val BgDark = Color(0xFF121212)
 val OnBgDark = Color(0xFFFFFFFF)
+
+val SportColor = Color(0xFFC8E6C9)
+val DailyColor = Color(0xFFFFF9C4)
+val LearningColor = Color(0xFFBBDEFB)
