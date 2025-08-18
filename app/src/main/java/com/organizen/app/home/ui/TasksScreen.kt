@@ -31,6 +31,7 @@ import java.time.LocalDate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +39,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +59,16 @@ import java.time.Instant
 import java.time.ZoneId
 
 
+private enum class SortOption {
+    DEFAULT,
+    DIFFICULTY_ASC,
+    DIFFICULTY_DESC,
+    TIME_ASC,
+    TIME_DESC,
+    DEADLINE_ASC,
+    DEADLINE_DESC
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +79,27 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
     var showDialog by remember { mutableStateOf(false) }
     var showDatePicker = remember { mutableStateOf(false) }
 
+    var sortOption by remember { mutableStateOf(SortOption.DEFAULT) }
+    var categoryFilter by remember { mutableStateOf<Category?>(null) }
+    var difficultyFilter by remember { mutableStateOf<Difficulty?>(null) }
+
+    val displayTasks by remember(tasks, sortOption, categoryFilter, difficultyFilter) {
+        derivedStateOf {
+            var list = tasks.toList()
+            categoryFilter?.let { cat -> list = list.filter { it.category == cat } }
+            difficultyFilter?.let { diff -> list = list.filter { it.difficulty == diff } }
+            when (sortOption) {
+                SortOption.DIFFICULTY_ASC -> list.sortedBy { it.difficulty.ordinal }
+                SortOption.DIFFICULTY_DESC -> list.sortedByDescending { it.difficulty.ordinal }
+                SortOption.TIME_ASC -> list.sortedBy { it.estimatedMinutes }
+                SortOption.TIME_DESC -> list.sortedByDescending { it.estimatedMinutes }
+                SortOption.DEADLINE_ASC -> list.sortedBy { it.deadline }
+                SortOption.DEADLINE_DESC -> list.sortedByDescending { it.deadline }
+                SortOption.DEFAULT -> list
+            }
+        }
+    }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { showDialog = true }) {
@@ -73,17 +107,109 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
             }
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            items(tasks, key = { it.id }) { task ->
-                val dismissState = rememberDismissState { value ->
-                    if (value == DismissValue.DismissedToStart) {
-                        tasksVm.removeTask(userId, task.id)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                var sortExpanded by remember { mutableStateOf(false) }
+                Box {
+                    Button(onClick = { sortExpanded = true }) { Text("Sort") }
+                    DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
+                        DropdownMenuItem(text = { Text("Default") }, onClick = {
+                            sortOption = SortOption.DEFAULT
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Easy → Hard") }, onClick = {
+                            sortOption = SortOption.DIFFICULTY_ASC
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Hard → Easy") }, onClick = {
+                            sortOption = SortOption.DIFFICULTY_DESC
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Shortest time") }, onClick = {
+                            sortOption = SortOption.TIME_ASC
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Longest time") }, onClick = {
+                            sortOption = SortOption.TIME_DESC
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Nearest deadline") }, onClick = {
+                            sortOption = SortOption.DEADLINE_ASC
+                            sortExpanded = false
+                        })
+                        DropdownMenuItem(text = { Text("Farthest deadline") }, onClick = {
+                            sortOption = SortOption.DEADLINE_DESC
+                            sortExpanded = false
+                        })
                     }
-                    true
+                }
+
+                var catExpanded by remember { mutableStateOf(false) }
+                Box {
+                    Button(onClick = { catExpanded = true }) {
+                        Text(categoryFilter?.name ?: "Category")
+                    }
+                    DropdownMenu(expanded = catExpanded, onDismissRequest = { catExpanded = false }) {
+                        DropdownMenuItem(text = { Text("All") }, onClick = {
+                            categoryFilter = null
+                            catExpanded = false
+                        })
+                        Category.values().forEach { cat ->
+                            DropdownMenuItem(text = {
+                                Text(cat.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }, onClick = {
+                                categoryFilter = cat
+                                catExpanded = false
+                            })
+                        }
+                    }
+                }
+
+                var diffExpanded by remember { mutableStateOf(false) }
+                Box {
+                    Button(onClick = { diffExpanded = true }) {
+                        Text(difficultyFilter?.name ?: "Difficulty")
+                    }
+                    DropdownMenu(expanded = diffExpanded, onDismissRequest = { diffExpanded = false }) {
+                        DropdownMenuItem(text = { Text("All") }, onClick = {
+                            difficultyFilter = null
+                            diffExpanded = false
+                        })
+                        Difficulty.values().forEach { diff ->
+                            DropdownMenuItem(text = {
+                                Text(diff.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }, onClick = {
+                                difficultyFilter = diff
+                                diffExpanded = false
+                            })
+                        }
+                    }
+                }
+
+                if (sortOption != SortOption.DEFAULT || categoryFilter != null || difficultyFilter != null) {
+                    TextButton(onClick = {
+                        sortOption = SortOption.DEFAULT
+                        categoryFilter = null
+                        difficultyFilter = null
+                    }) {
+                        Text("Reset")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            LazyColumn {
+                items(displayTasks, key = { it.id }) { task ->
+                    val dismissState = rememberDismissState { value ->
+                        if (value == DismissValue.DismissedToStart) {
+                            tasksVm.removeTask(userId, task.id)
+                        }
+                        true
                 }
                 SwipeToDismiss(
                     state = dismissState,
