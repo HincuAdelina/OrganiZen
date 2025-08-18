@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.FixedThreshold
 import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.rememberDismissState
 import androidx.compose.material.icons.Icons
@@ -25,6 +26,33 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.*
 import java.time.LocalDate
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.zIndex
+import java.time.Instant
+import java.time.ZoneId
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
@@ -34,6 +62,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
     val tasks = tasksVm.tasksFor(userId)
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var showDialog by remember { mutableStateOf(false) }
+    var showDatePicker = remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -57,16 +86,23 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                 SwipeToDismiss(
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
+                    dismissThresholds = {
+                        FixedThreshold(100.dp)
+                    },
                     background = {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(Color.Red.copy(alpha = 0.3f))
-                                .padding(16.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        if (dismissState.targetValue == DismissValue.DismissedToStart) {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Red.copy(alpha = 0.3f))
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            )
+                            {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            }
                         }
+
                     },
                     dismissContent = {
                         TaskCard(
@@ -76,14 +112,15 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                         )
                     }
                 )
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
-
     if (showDialog) {
         TaskDialog(
             task = editingTask,
             onDismiss = { showDialog = false; editingTask = null },
+            showDatePicker = showDatePicker,
             onSave = {
                 tasksVm.upsertTask(userId, it)
                 showDialog = false
@@ -92,6 +129,35 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
         )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerModal(
+    onDateSelected: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                onDateSelected(datePickerState.selectedDateMillis)
+                onDismiss()
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -110,7 +176,6 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
             .clickable { onClick() },
         border = if (overdue) BorderStroke(1.dp, Color.Red) else null,
         colors = CardDefaults.cardColors(
@@ -134,7 +199,12 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                     .padding(start = 48.dp, end = 80.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Circle, contentDescription = null, tint = difficultyColor, modifier = Modifier.size(12.dp))
+                    Icon(
+                        Icons.Default.Circle,
+                        contentDescription = null,
+                        tint = difficultyColor,
+                        modifier = Modifier.size(12.dp)
+                    )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         task.description,
@@ -149,20 +219,31 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
                 Row {
                     task.tags.forEach { tag ->
                         tagIcons[tag]?.let { icon ->
-                            Icon(icon, contentDescription = tag.name, modifier = Modifier.size(16.dp).padding(end = 4.dp))
+                            Icon(
+                                icon,
+                                contentDescription = tag.name,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 4.dp)
+                            )
                         }
                     }
                 }
             }
             Text(
-                task.tags.firstOrNull()?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "",
+                task.tags.firstOrNull()?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                    ?: "",
                 modifier = Modifier.align(Alignment.TopStart)
             )
             Row(
                 modifier = Modifier.align(Alignment.TopEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.AccessTime,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(Modifier.width(2.dp))
                 Text("${task.estimatedMinutes}m", style = MaterialTheme.typography.bodySmall)
             }
@@ -178,20 +259,28 @@ private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: ()
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Unit) {
+private fun TaskDialog(
+    task: Task?,
+    onDismiss: () -> Unit,
+    showDatePicker: MutableState<Boolean>,
+    onSave: (Task) -> Unit
+) {
     var description by remember { mutableStateOf(task?.description ?: "") }
     var estimated by remember { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
-    var deadline by remember { mutableStateOf(task?.deadline?.toString() ?: "") }
+
     var difficulty by remember { mutableStateOf(task?.difficulty ?: Difficulty.EASY) }
-    val selectedTags = remember { mutableStateListOf<Tag>().apply { addAll(task?.tags ?: emptyList()) } }
+    val selectedTags =
+        remember { mutableStateListOf<Tag>().apply { addAll(task?.tags ?: emptyList()) } }
+    var selectedDate by remember { mutableStateOf(task?.deadline) }
 
     AlertDialog(
+        modifier = Modifier.zIndex(2f),
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 val minutes = estimated.toIntOrNull()
-                val date = runCatching { LocalDate.parse(deadline) }.getOrNull()
-                if (description.isNotBlank() && minutes != null && date != null) {
+
+                if (description.isNotBlank() && minutes != null) {
                     onSave(
                         Task(
                             id = task?.id ?: System.currentTimeMillis(),
@@ -199,7 +288,7 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                             difficulty = difficulty,
                             estimatedMinutes = minutes,
                             tags = selectedTags.toList(),
-                            deadline = date,
+                            deadline = selectedDate ?: task?.deadline ?: LocalDate.now(),
                             completed = task?.completed ?: false
                         )
                     )
@@ -222,18 +311,42 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                     onValueChange = { estimated = it },
                     label = { Text("Estimated minutes") }
                 )
-                TextField(
-                    value = deadline,
-                    onValueChange = { deadline = it },
-                    label = { Text("Deadline (YYYY-MM-DD)") }
-                )
+                Box(
+                    modifier = Modifier
+//                        .padding(padding)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedDate?.toString() ?: "",
+                        onValueChange = { },
+                        label = { Text("Deadline") },
+                        readOnly = true,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                showDatePicker.value = !showDatePicker.value
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Select date"
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                    )
+
+                }
                 Text("Difficulty")
                 Row {
                     Difficulty.values().forEach { d ->
                         FilterChip(
                             selected = difficulty == d,
                             onClick = { difficulty = d },
-                            label = { Text(d.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = {
+                                Text(
+                                    d.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }
                         )
                         Spacer(Modifier.width(4.dp))
                     }
@@ -244,14 +357,28 @@ private fun TaskDialog(task: Task?, onDismiss: () -> Unit, onSave: (Task) -> Uni
                         FilterChip(
                             selected = selectedTags.contains(tag),
                             onClick = {
-                                if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(tag)
+                                if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(
+                                    tag
+                                )
                             },
-                            label = { Text(tag.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = {
+                                Text(
+                                    tag.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }
                         )
                         Spacer(Modifier.width(4.dp))
                     }
                 }
             }
+
         }
     )
+    if (showDatePicker.value) {
+        DatePickerModal(onDateSelected = {
+            selectedDate = Instant.ofEpochMilli(it ?: 0L).atZone(ZoneId.systemDefault()).toLocalDate()
+            showDatePicker.value = false
+        }, onDismiss = {
+            showDatePicker.value = false
+        })
+    }
 }
