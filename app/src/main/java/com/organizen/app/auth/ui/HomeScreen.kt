@@ -19,7 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.ui.ChatScreen
-import com.organizen.app.home.ui.HealthScreen
+import com.organizen.app.home.ui.HealthSection
 import com.organizen.app.home.ui.TasksScreen
 import com.organizen.app.home.ui.ProfileDrawerContent
 import com.organizen.app.navigation.BottomNavScreen
@@ -84,7 +84,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm) }
-                composable(BottomNavScreen.Health.route) { HealthScreen() }
+                composable(BottomNavScreen.Health.route) { HealthSection() }
                 composable(BottomNavScreen.Chat.route) { ChatScreen() }
             }
         }

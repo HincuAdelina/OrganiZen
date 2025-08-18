@@ -10,18 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HealthScreen() {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Health section")
-    }
-}
-
-@Composable
 fun ChatScreen() {
     Box(
         Modifier
