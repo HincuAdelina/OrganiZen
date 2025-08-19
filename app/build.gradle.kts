@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,11 +7,15 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+val properties = gradleLocalProperties(rootDir, providers)
+val myProp = properties["propName"]
+
 android {
     namespace = "com.organizen.app"
     compileSdk = 35
 
     defaultConfig {
+        buildConfigField ("String", "default_account_iccid", properties.getProperty("default.account.iccid", ""))
         applicationId = "com.organizen.app"
         minSdk = 34
         targetSdk = 35
@@ -19,7 +24,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -36,6 +44,17 @@ android {
     }
     kotlinOptions {
         jvmTarget = "21"
+    }
+
+    packaging {
+        resources {
+            excludes.add(
+                "META-INF/INDEX.LIST"
+            )
+            excludes.add(
+                "META-INF/io.netty.versions.properties"
+            )
+        }
     }
 }
 
@@ -110,6 +129,7 @@ dependencies {
     // Firebase Auth (+ BOM)
     implementation(platform("com.google.firebase:firebase-bom:34.1.0"))
     implementation("com.google.firebase:firebase-auth")
+    implementation(libs.koog.agents)
 //    implementation(platform(libs.firebase.bom))
 //    implementation(libs.firebase.auth.ktx)
 //    implementation(platform("com.google.firebase:firebase-bom:32.8.0")) // Or the latest BoM version

@@ -4,6 +4,7 @@ agp = "8.9.1"
 composeBom = "2025.07.00"
 connectClientVersion = "1.1.0-alpha11"
 coreSplashscreen = "1.0.1"
+koogAgents = "0.3.0"
 kotlin = "2.0.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -21,6 +22,7 @@ androidx-connect-client = { module = "androidx.health.connect:connect-client", v
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+koog-agents = { module = "ai.koog:koog-agents", version.ref = "koogAgents" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }

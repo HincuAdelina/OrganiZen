@@ -24,6 +24,7 @@ import com.organizen.app.home.ui.TasksScreen
 import com.organizen.app.home.ui.ProfileDrawerContent
 import com.organizen.app.navigation.BottomNavScreen
 import com.organizen.app.R
+import com.organizen.app.home.ui.ChatSection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm) }
                 composable(BottomNavScreen.Health.route) { HealthSection() }
-                composable(BottomNavScreen.Chat.route) { ChatScreen() }
+                composable(BottomNavScreen.Chat.route) { ChatSection() }
             }
         }
     }
