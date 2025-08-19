@@ -26,6 +26,7 @@ import com.organizen.app.R
 import com.organizen.app.home.ui.ChatSection
 import kotlinx.coroutines.launch
 import com.organizen.app.home.data.ChatViewModel
+import com.organizen.app.home.data.TasksViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +36,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val chatViewModel: ChatViewModel = viewModel()
+    val tasksViewModel: TasksViewModel = viewModel()
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -86,8 +88,8 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
                 startDestination = BottomNavScreen.Tasks.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(BottomNavScreen.Tasks.route) { TasksScreen(vm) }
-                composable(BottomNavScreen.Health.route) { HealthSection(vm, navController, chatViewModel) }
+                composable(BottomNavScreen.Tasks.route) { TasksScreen(vm, tasksViewModel) }
+                composable(BottomNavScreen.Health.route) { HealthSection(vm, navController, chatViewModel, tasksViewModel) }
                 composable(BottomNavScreen.Chat.route) { ChatSection(chatViewModel = chatViewModel) }
             }
         }
