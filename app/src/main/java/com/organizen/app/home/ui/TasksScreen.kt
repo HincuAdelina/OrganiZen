@@ -288,7 +288,7 @@ fun DatePickerModal(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit) {
+fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit) {
     val overdue = LocalDate.now().isAfter(task.deadline) && !task.completed
     val dueToday = task.deadline == LocalDate.now() && !task.completed
     val difficultyColor = when (task.difficulty) {

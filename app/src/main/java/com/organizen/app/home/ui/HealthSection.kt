@@ -20,10 +20,13 @@ import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.ChatViewModel
 import com.organizen.app.home.data.HealthViewModel
 import com.organizen.app.home.data.TasksViewModel
-import com.organizen.app.home.data.Difficulty
-import java.time.LocalDate
+import com.organizen.app.home.data.Task
 import com.organizen.app.navigation.BottomNavScreen
+import java.time.LocalDate
+import android.os.Build
+import androidx.annotation.RequiresApi
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HealthSection(
     authVm: AuthViewModel,
@@ -44,12 +47,12 @@ fun HealthSection(
         val tasks = tasksVm.tasksFor(userId)
         val available = tasks.filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
         val tired = vm.steps!! < 5000 || vm.sleepHours!! < 7.0
+        val comparator = compareBy<Task> { it.difficulty.ordinal }
+            .thenBy { it.estimatedMinutes }
         val recommended = if (tired) {
-            available.filter { it.difficulty == Difficulty.EASY || it.estimatedMinutes <= 30 }
-                .minByOrNull { it.estimatedMinutes }
+            available.sortedWith(comparator).firstOrNull()
         } else {
-            available.filter { it.difficulty == Difficulty.HARD || it.estimatedMinutes >= 60 }
-                .maxByOrNull { it.estimatedMinutes }
+            available.sortedWith(comparator.reversed()).firstOrNull()
         }
         Column(
             Modifier
@@ -80,27 +83,31 @@ fun HealthSection(
                 }
             }
             recommended?.let { task ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(
-                        Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Recommended task")
-                        Text(task.description)
-                        Button(onClick = {
-                            val prompt = if (tired) {
-                                "Suggest a short relaxation exercise."
-                            } else {
-                                "Give me a productivity advice to stay focused."
-                            }
-                            chatViewModel.sendMessage(prompt)
-                            navController.navigate(BottomNavScreen.Chat.route)
-                        }) {
-                            Text(if (tired) "Get relax recommendations" else "Get productivity advices")
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Recommended task")
+                    TaskCard(
+                        task = task,
+                        onCheckedChange = { done -> tasksVm.setDone(userId, task.id, done) },
+                        onClick = {}
+                    )
+                    Button(onClick = {
+                        val prompt = if (tired) {
+                            "Suggest a short relaxation exercise."
+                        } else {
+                            "Give me a productivity advice to stay focused."
                         }
+                        chatViewModel.sendMessage(prompt)
+                        navController.navigate(BottomNavScreen.Chat.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }) {
+                        Text(if (tired) "Get relax recommendations" else "Get productivity advices")
                     }
                 }
             }
