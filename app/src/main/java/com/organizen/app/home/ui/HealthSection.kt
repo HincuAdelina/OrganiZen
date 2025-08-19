@@ -45,7 +45,8 @@ fun HealthSection(
         val userId = authVm.currentUser?.uid ?: "guest"
         val tasks = tasksVm.tasksFor(userId)
         val available = tasks.filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
-        val tired = vm.steps!! < 5000 || vm.sleepHours!! < 7.0
+        // Consider the user tired only when today's sleep is low or they have already walked a lot
+        val tired = vm.sleepHours!! < 7.0 || vm.steps!! > 5000
         val recommended = if (available.isNotEmpty()) {
             val easiest = available.minByOrNull { it.difficulty.ordinal }
             val shortest = available.minByOrNull { it.estimatedMinutes }
