@@ -18,7 +18,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.organizen.app.auth.AuthViewModel
-import com.organizen.app.home.ui.ChatScreen
 import com.organizen.app.home.ui.HealthSection
 import com.organizen.app.home.ui.TasksScreen
 import com.organizen.app.home.ui.ProfileDrawerContent
@@ -26,6 +25,8 @@ import com.organizen.app.navigation.BottomNavScreen
 import com.organizen.app.R
 import com.organizen.app.home.ui.ChatSection
 import kotlinx.coroutines.launch
+import com.organizen.app.home.data.ChatViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val chatViewModel: ChatViewModel = viewModel()
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -85,8 +87,8 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm) }
-                composable(BottomNavScreen.Health.route) { HealthSection() }
-                composable(BottomNavScreen.Chat.route) { ChatSection() }
+                composable(BottomNavScreen.Health.route) { HealthSection(vm, navController, chatViewModel) }
+                composable(BottomNavScreen.Chat.route) { ChatSection(chatViewModel = chatViewModel) }
             }
         }
     }

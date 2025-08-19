@@ -32,11 +32,12 @@ import androidx.compose.ui.unit.dp
 import com.organizen.app.home.data.ChatViewModel
 import com.organizen.app.home.models.Message
 import com.organizen.app.home.models.MessageType
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun ChatSection(
     modifier: Modifier = Modifier,
-    chatViewModel: ChatViewModel = remember { ChatViewModel() },
+    chatViewModel: ChatViewModel = viewModel(),
 ) {
     val uiState by chatViewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
