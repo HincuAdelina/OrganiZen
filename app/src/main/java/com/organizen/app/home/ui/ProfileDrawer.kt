@@ -1,6 +1,7 @@
 package com.organizen.app.home.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
@@ -13,12 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.organizen.app.auth.AuthViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.home.data.HealthViewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () -> Unit) {
@@ -27,11 +28,18 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
     var editingName by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+
     val healthVm: HealthViewModel = viewModel()
+
+    // Steps state
     var editingSteps by remember { mutableStateOf(false) }
     var stepsTargetText by remember { mutableStateOf(healthVm.stepsGoal.toInt().toString()) }
+
+    // Sleep state (ore + minute)
     var editingSleep by remember { mutableStateOf(false) }
-    var sleepTargetText by remember { mutableStateOf(healthVm.sleepGoal.toString()) }
+    val initSleepTotalMin = remember(healthVm.sleepGoal) { (healthVm.sleepGoal * 60).roundToInt() }
+    var sleepHoursText by remember { mutableStateOf((initSleepTotalMin / 60).toString()) }
+    var sleepMinutesText by remember { mutableStateOf((initSleepTotalMin % 60).toString()) }
 
     Column(
         modifier = Modifier
@@ -40,13 +48,16 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            // Name (editabil)
+            // Name
             EditableRow(
                 value = name,
                 editing = editingName,
                 label = "Name",
                 onValueChange = { name = it },
-                onEdit = { editingName = true },
+                onEdit = {
+                    name = vm.currentUser?.displayName.orEmpty()
+                    editingName = true
+                },
                 onSave = {
                     vm.updateName(name) { if (it) editingName = false }
                 }
@@ -65,10 +76,12 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
             Spacer(Modifier.height(24.dp))
             Text("Set your targets", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
+
+            // Steps target (menține chenarul și când nu editezi)
             EditableRow(
                 value = if (editingSteps) stepsTargetText else healthVm.stepsGoal.toInt().toString(),
                 editing = editingSteps,
-                label = "Steps target",
+                label = "Steps",
                 onValueChange = { stepsTargetText = it },
                 onEdit = {
                     stepsTargetText = healthVm.stepsGoal.toInt().toString()
@@ -80,21 +93,29 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
+
             Spacer(Modifier.height(8.dp))
-            EditableRow(
-                value = if (editingSleep) sleepTargetText else healthVm.sleepGoal.toString(),
+
+            // Sleep target în ore + minute (menține chenarele și când nu editezi)
+            EditableSleepRow(
+                hoursText = sleepHoursText,
+                minutesText = sleepMinutesText,
                 editing = editingSleep,
-                label = "Sleep hours target",
-                onValueChange = { sleepTargetText = it },
+                onHoursChange = { sleepHoursText = it.filter { ch -> ch.isDigit() } },
+                onMinutesChange = { sleepMinutesText = it.filter { ch -> ch.isDigit() } },
                 onEdit = {
-                    sleepTargetText = healthVm.sleepGoal.toString()
+                    val total = (healthVm.sleepGoal * 60).roundToInt()
+                    sleepHoursText = (total / 60).toString()
+                    sleepMinutesText = (total % 60).toString()
                     editingSleep = true
                 },
                 onSave = {
-                    sleepTargetText.toDoubleOrNull()?.let { healthVm.updateSleepGoal(it) }
+                    val h = sleepHoursText.toIntOrNull() ?: 0
+                    val m = (sleepMinutesText.toIntOrNull() ?: 0).coerceIn(0, 59)
+                    val goal = h + m / 60.0
+                    healthVm.updateSleepGoal(goal)
                     editingSleep = false
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                }
             )
         }
 
@@ -107,6 +128,7 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
             modifier = Modifier.fillMaxWidth()
         ) { Text("Logout") }
     }
+
 
     if (showPasswordDialog) {
         var password by remember { mutableStateOf("") }
@@ -204,23 +226,64 @@ private fun EditableRow(
     onSave: () -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (editing) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                label = { Text(label) },
-                keyboardOptions = keyboardOptions
-            )
-            IconButton(onClick = onSave) {
-                Icon(Icons.Filled.Check, contentDescription = "Save")
-            }
-        } else {
-            Text(text = value, modifier = Modifier.weight(1f))
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, contentDescription = "Edit")
-            }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            label = { Text(label) },
+            readOnly = !editing,
+            keyboardOptions = keyboardOptions,
+            singleLine = true
+        )
+        IconButton(onClick = if (editing) onSave else onEdit) {
+            Icon(if (editing) Icons.Filled.Check else Icons.Filled.Edit,
+                contentDescription = if (editing) "Save" else "Edit")
+        }
+    }
+}
+
+@Composable
+private fun EditableSleepRow(
+    hoursText: String,
+    minutesText: String,
+    editing: Boolean,
+    onHoursChange: (String) -> Unit,
+    onMinutesChange: (String) -> Unit,
+    onEdit: () -> Unit,
+    onSave: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = hoursText,
+            onValueChange = onHoursChange,
+            modifier = Modifier.weight(1f),
+            label = { Text("Sleep hours") },
+            placeholder = { Text("h") },
+            readOnly = !editing,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true
+        )
+        Spacer(Modifier.width(8.dp))
+        OutlinedTextField(
+            value = minutesText,
+            onValueChange = onMinutesChange,
+            modifier = Modifier.weight(1f),
+            label = { Text("Minutes") },
+            placeholder = { Text("m") },
+            readOnly = !editing,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true
+        )
+        IconButton(onClick = if (editing) onSave else onEdit) {
+            Icon(if (editing) Icons.Filled.Check else Icons.Filled.Edit,
+                contentDescription = if (editing) "Save" else "Edit")
         }
     }
 }

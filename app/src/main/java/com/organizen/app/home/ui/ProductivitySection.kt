@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -33,8 +34,7 @@ import com.organizen.app.home.data.HealthViewModel
 import com.organizen.app.home.data.TasksViewModel
 import com.organizen.app.navigation.BottomNavScreen
 import java.time.LocalDate
-import kotlin.math.min
-import kotlin.math.roundToInt
+import kotlin.math.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -75,6 +75,10 @@ fun ProductivitySection(
     val sleepMinutes = (vm.sleepHours!! * 60).roundToInt()
     val sleepHoursPart = sleepMinutes / 60
     val sleepMinutesPart = sleepMinutes % 60
+    // în ProductivitySection, după calculul sleepHoursPart/MinutesPart, adaugă:
+    val sleepGoalTotalMin = (vm.sleepGoal * 60).roundToInt()
+    val sleepGoalH = sleepGoalTotalMin / 60
+    val sleepGoalM = sleepGoalTotalMin % 60
 
     // progress (0..1)
     val stepsProgress = (vm.steps!!.toFloat() / vm.stepsGoal).coerceIn(0f, 1f)
@@ -85,11 +89,11 @@ fun ProductivitySection(
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(scroll) // <<— SCROLL pe toată pagina
+            .verticalScroll(scroll) // scroll pe toată pagina
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ——— Rând cu cele două inele (fără Card) ———
+        // ——— două inele pe același rând (fără Card în spate) ———
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -102,30 +106,26 @@ fun ProductivitySection(
                 centerTop = "%,d".format(vm.steps),
                 centerBottom = "of ${vm.stepsGoal.toInt()}",
                 progress = stepsProgress,
-                ringSize = 140.dp,      // mai mic să încapă două pe un rând
+                ringSize = 130.dp,
                 ringStroke = 12.dp,
-                gradientColors = listOf(
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.tertiary
-                )
+                startColor = MaterialTheme.colorScheme.primary,
+                endColor = MaterialTheme.colorScheme.tertiary
             )
             StatRingTile(
                 modifier = Modifier.weight(1f),
                 title = "Sleep",
                 icon = Icons.Filled.Bedtime,
                 centerTop = "${sleepHoursPart}h ${sleepMinutesPart}m",
-                centerBottom = "goal ${vm.sleepGoal.toInt()}h",
+                centerBottom = "goal ${sleepGoalH}h ${sleepGoalM}m", // <- acum arată și minutele
                 progress = sleepProgress,
-                ringSize = 140.dp,
+                ringSize = 130.dp,
                 ringStroke = 12.dp,
-                gradientColors = listOf(
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.secondary
-                )
+                startColor = MaterialTheme.colorScheme.primary,
+                endColor = MaterialTheme.colorScheme.secondary
             )
         }
 
-        // ——— Recomandarea + buton (vor face scroll când nu încape) ———
+        // ——— Recomandare + buton ———
         recommended?.let { task ->
             Column(
                 Modifier.fillMaxWidth(),
@@ -159,7 +159,7 @@ fun ProductivitySection(
     }
 }
 
-/** Variantă fără Card; doar titlu + inelul cu gradient și text central. */
+/** Tile fără Card: titlu + inel cu gradient (start→end) și capete glow. */
 @Composable
 private fun StatRingTile(
     modifier: Modifier = Modifier,
@@ -170,7 +170,8 @@ private fun StatRingTile(
     progress: Float,
     ringSize: Dp,
     ringStroke: Dp,
-    gradientColors: List<Color>
+    startColor: Color,
+    endColor: Color
 ) {
     Column(
         modifier = modifier,
@@ -187,7 +188,8 @@ private fun StatRingTile(
             ringSize = ringSize,
             stroke = ringStroke,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            gradientColors = gradientColors
+            startColor = startColor,
+            endColor = endColor
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -206,20 +208,27 @@ private fun StatRingTile(
     }
 }
 
+/**
+ * Inel de progres cu:
+ *  - gradient „liniar” de la start→end de-a lungul arcului (folosind sweepGradient cu stops limitate la sweep)
+ *  - halo subtil pe tot arc-ul
+ *  - glow la capete (radial)
+ */
 @Composable
 private fun GoalRing(
     progress: Float,
     modifier: Modifier = Modifier,
-    ringSize: Dp = 140.dp,
+    ringSize: Dp = 130.dp,
     stroke: Dp = 12.dp,
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    gradientColors: List<Color> = listOf(Color(0xFF5B86E5), Color(0xFF36D1DC)),
-    startAngle: Float = -90f, // start from top
+    startColor: Color = Color(0xFF5B86E5),
+    endColor: Color = Color(0xFF36D1DC),
+    startAngle: Float = -90f, // de sus
     content: @Composable BoxScope.() -> Unit
 ) {
     val animated by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(800),
+        animationSpec = tween(900),
         label = "ringProgress"
     )
 
@@ -231,12 +240,10 @@ private fun GoalRing(
             val strokePx = stroke.toPx()
             val diameter = min(size.width, size.height)
             val arcSize = Size(diameter - strokePx, diameter - strokePx)
-            val topLeft = Offset(
-                (size.width - arcSize.width) / 2f,
-                (size.height - arcSize.height) / 2f
-            )
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val topLeft = Offset(center.x - arcSize.width / 2f, center.y - arcSize.height / 2f)
 
-            // fundalul inelului
+            // TRACK (fundal)
             drawArc(
                 color = trackColor,
                 startAngle = 0f,
@@ -247,22 +254,30 @@ private fun GoalRing(
                 style = Stroke(width = strokePx, cap = StrokeCap.Round)
             )
 
-            // progresul cu gradient
-            val brush = Brush.sweepGradient(
-                colors = gradientColors,
-                center = Offset(size.width / 2f, size.height / 2f)
+            // Gradient „linear pe arc” (folosim sweep cu stops limitate la segment)
+            val sweep = 360f * animated
+            val frac = max(0.001f, (sweep / 360f).coerceIn(0f, 1f))
+            val stops = arrayOf(
+                0f to startColor,
+                frac to endColor,
+                1f to endColor
             )
 
-            drawArc(
-                brush = brush,
-                startAngle = startAngle,
-                sweepAngle = 360f * animated,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokePx, cap = StrokeCap.Round)
-            )
+            // ARC principal (fără halo/glow)
+            rotate(degrees = startAngle, pivot = center) {
+                drawArc(
+                    brush = Brush.sweepGradient(colorStops = stops, center = center),
+                    startAngle = 0f,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                )
+            }
         }
+
+        // centru (număr + sublabel)
         content()
     }
 }
