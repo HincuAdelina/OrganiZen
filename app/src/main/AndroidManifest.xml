@@ -26,11 +26,15 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".notifications.TaskReminderReceiver"
+            android:exported="false" />
     </application>
+
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
     <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
 </manifest>
