@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.organizen.app.auth.AuthViewModel
+import com.organizen.app.home.data.HealthViewModel
 import com.organizen.app.home.ui.ProductivitySection
 import com.organizen.app.home.ui.TasksScreen
 import com.organizen.app.home.ui.ProfileDrawerContent
@@ -45,11 +46,12 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val chatViewModel: ChatViewModel = viewModel()
     val tasksViewModel: TasksViewModel = viewModel()
+    val healthViewModel: HealthViewModel = viewModel()
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(modifier = Modifier.width(300.dp)) {
-                ProfileDrawerContent(vm, onLogout = onLogout) {
+                ProfileDrawerContent(vm, healthViewModel, onLogout = onLogout) {
                     scope.launch { drawerState.close() }
                 }
             }
@@ -110,7 +112,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm, tasksViewModel) }
-                composable(BottomNavScreen.Productivity.route) { ProductivitySection(vm, navController, chatViewModel, tasksViewModel) }
+                composable(BottomNavScreen.Productivity.route) { ProductivitySection(vm, navController, chatViewModel, tasksViewModel, healthViewModel) }
                 composable(BottomNavScreen.Chat.route) { ChatSection(chatViewModel = chatViewModel) }
             }
         }

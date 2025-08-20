@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.ChatViewModel
@@ -43,7 +42,7 @@ fun ProductivitySection(
     navController: NavController,
     chatViewModel: ChatViewModel,
     tasksVm: TasksViewModel,
-    vm: HealthViewModel = viewModel(),
+    vm: HealthViewModel,
 ) {
     if (vm.steps == null || vm.sleepHours == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -17,19 +17,16 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.organizen.app.auth.AuthViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.organizen.app.home.data.HealthViewModel
 import kotlin.math.roundToInt
 
 @Composable
-fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () -> Unit) {
-    var name by remember { mutableStateOf(vm.currentUser?.displayName ?: "") }
+fun ProfileDrawerContent(vm: AuthViewModel, healthVm: HealthViewModel, onLogout: () -> Unit, onClose: () -> Unit){
+var name by remember { mutableStateOf(vm.currentUser?.displayName ?: "") }
     val email = vm.currentUser?.email ?: ""
     var editingName by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
-
-    val healthVm: HealthViewModel = viewModel()
 
     // Steps state
     var editingSteps by remember { mutableStateOf(false) }
