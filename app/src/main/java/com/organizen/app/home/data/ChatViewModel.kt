@@ -30,6 +30,9 @@ class ChatViewModel: ViewModel() {
         }
     }
 
+    fun addUserMessage(text: String) = addMessage(text, MessageType.USER)
+    fun addAssistantMessage(text: String) = addMessage(text, MessageType.TOOL)
+
     fun sendMessage(string: String) {
         if (uiState.value.agentIsTyping) {
             return

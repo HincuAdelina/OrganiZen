@@ -29,15 +29,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.ChatViewModel
+import com.organizen.app.home.data.Difficulty
+import com.organizen.app.home.data.HealthViewModel
+import com.organizen.app.home.data.TasksViewModel
 import com.organizen.app.home.models.Message
 import com.organizen.app.home.models.MessageType
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun ChatSection(
     modifier: Modifier = Modifier,
     chatViewModel: ChatViewModel = viewModel(),
+    authViewModel: AuthViewModel,
+    tasksViewModel: TasksViewModel,
+    healthViewModel: HealthViewModel,
 ) {
     val uiState by chatViewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -86,6 +94,47 @@ fun ChatSection(
                             .padding(horizontal = 8.dp, vertical = 6.dp)
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = { chatViewModel.sendMessage("Mindfulness") }) {
+                Text("Mindfulness")
+            }
+            OutlinedButton(onClick = {
+                chatViewModel.addUserMessage("How productive I was today?")
+                val userId = authViewModel.currentUser?.uid ?: "guest"
+                val tasks = tasksViewModel.tasksFor(userId)
+                val easy = tasks.count { it.completed && it.difficulty == Difficulty.EASY }
+                val med = tasks.count { it.completed && it.difficulty == Difficulty.MEDIUM }
+                val hard = tasks.count { it.completed && it.difficulty == Difficulty.HARD }
+                val totalPoints = tasks.sumOf {
+                    when (it.difficulty) {
+                        Difficulty.EASY -> 1
+                        Difficulty.MEDIUM -> 2
+                        Difficulty.HARD -> 3
+                    }
+                }
+                val completedPoints = tasks.filter { it.completed }.sumOf {
+                    when (it.difficulty) {
+                        Difficulty.EASY -> 1
+                        Difficulty.MEDIUM -> 2
+                        Difficulty.HARD -> 3
+                    }
+                }
+                val taskScore = if (totalPoints == 0) 0.0 else completedPoints.toDouble() / totalPoints
+                val stepsScore = (healthViewModel.steps?.toDouble() ?: 0.0) / healthViewModel.stepsGoal
+                val sleepScore = (healthViewModel.sleepHours ?: 0.0) / healthViewModel.sleepGoal
+                val productivity = ((taskScore + stepsScore + sleepScore) / 3.0 * 100).roundToInt()
+                val msg = "Tasks done: ${easy + med + hard}/${tasks.size} (easy $easy, medium $med, hard $hard). Steps ${(healthViewModel.steps ?: 0L)}/${healthViewModel.stepsGoal.toInt()} (${(stepsScore*100).roundToInt()}%). Sleep ${"%.1f".format(healthViewModel.sleepHours ?: 0.0)}/${healthViewModel.sleepGoal}h (${(sleepScore*100).roundToInt()}%). Productivity score $productivity%."
+                chatViewModel.addAssistantMessage(msg)
+            }) {
+                Text("How productive I was today?")
             }
         }
 

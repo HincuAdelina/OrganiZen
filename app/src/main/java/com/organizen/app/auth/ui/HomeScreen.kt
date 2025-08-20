@@ -113,7 +113,14 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm, tasksViewModel) }
                 composable(BottomNavScreen.Productivity.route) { ProductivitySection(vm, navController, chatViewModel, tasksViewModel, healthViewModel) }
-                composable(BottomNavScreen.Chat.route) { ChatSection(chatViewModel = chatViewModel) }
+                composable(BottomNavScreen.Chat.route) {
+                    ChatSection(
+                        chatViewModel = chatViewModel,
+                        authViewModel = vm,
+                        tasksViewModel = tasksViewModel,
+                        healthViewModel = healthViewModel,
+                    )
+                }
             }
         }
     }
