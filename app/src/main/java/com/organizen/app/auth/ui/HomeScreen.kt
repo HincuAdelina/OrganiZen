@@ -13,12 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.organizen.app.auth.AuthViewModel
-import com.organizen.app.home.ui.HealthSection
+import com.organizen.app.home.ui.ProductivitySection
 import com.organizen.app.home.ui.TasksScreen
 import com.organizen.app.home.ui.ProfileDrawerContent
 import com.organizen.app.navigation.BottomNavScreen
@@ -28,7 +29,13 @@ import kotlinx.coroutines.launch
 import com.organizen.app.home.data.ChatViewModel
 import com.organizen.app.home.data.TasksViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import android.os.Build
+import androidx.annotation.RequiresApi
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
@@ -47,10 +54,19 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             }
         }
     ) {
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+        val title = when (currentRoute) {
+            BottomNavScreen.Tasks.route -> "My tasks"
+            BottomNavScreen.Productivity.route -> LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.getDefault()))
+            BottomNavScreen.Chat.route -> "OrganiZen assistant"
+            else -> ""
+        }
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {},
+                    title = {
+                        Text(title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleLarge)
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Image(painterResource(R.drawable.organizen_icon), contentDescription = "Profile")
@@ -60,10 +76,9 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
             },
             bottomBar = {
                 NavigationBar {
-                    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
                     val items = listOf(
                         BottomNavScreen.Tasks,
-                        BottomNavScreen.Health,
+                        BottomNavScreen.Productivity,
                         BottomNavScreen.Chat
                     )
                     items.forEach { screen ->
@@ -89,7 +104,7 @@ fun HomeScreen(vm: AuthViewModel, onLogout: () -> Unit) {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(BottomNavScreen.Tasks.route) { TasksScreen(vm, tasksViewModel) }
-                composable(BottomNavScreen.Health.route) { HealthSection(vm, navController, chatViewModel, tasksViewModel) }
+                composable(BottomNavScreen.Productivity.route) { ProductivitySection(vm, navController, chatViewModel, tasksViewModel) }
                 composable(BottomNavScreen.Chat.route) { ChatSection(chatViewModel = chatViewModel) }
             }
         }

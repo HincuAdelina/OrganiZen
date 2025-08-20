@@ -4,14 +4,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.organizen.app.auth.AuthViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.organizen.app.home.data.HealthViewModel
 
 @Composable
 fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () -> Unit) {
@@ -20,6 +27,9 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
     var editingName by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    val healthVm: HealthViewModel = viewModel()
+    var stepsTargetText by remember { mutableStateOf(healthVm.stepsGoal.toInt().toString()) }
+    var sleepTargetText by remember { mutableStateOf(healthVm.sleepGoal.toString()) }
 
     Column(
         modifier = Modifier
@@ -49,6 +59,31 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
             Button(onClick = { showPasswordDialog = true }) {
                 Text("Change Password")
             }
+
+            Spacer(Modifier.height(24.dp))
+            Text("Set your targets", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = stepsTargetText,
+                onValueChange = {
+                    stepsTargetText = it
+                    it.toFloatOrNull()?.let { value -> healthVm.updateStepsGoal(value) }
+                },
+                label = { Text("Steps target") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = sleepTargetText,
+                onValueChange = {
+                    sleepTargetText = it
+                    it.toDoubleOrNull()?.let { value -> healthVm.updateSleepGoal(value) }
+                },
+                label = { Text("Sleep hours target") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         Button(
@@ -65,6 +100,8 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
         var password by remember { mutableStateOf("") }
         var confirm by remember { mutableStateOf("") }
         var error by remember { mutableStateOf<String?>(null) }
+        var passwordVisible by remember { mutableStateOf(false) }
+        var confirmVisible by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showPasswordDialog = false },
@@ -75,14 +112,26 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = confirm,
                         onValueChange = { confirm = it },
                         label = { Text("Confirm Password") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (confirmVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                                Icon(image, contentDescription = if (confirmVisible) "Hide password" else "Show password")
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                     error?.let { Text(it, color = Color.Red) }

@@ -30,6 +30,10 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         private set
     var sleepHours by mutableStateOf<Double?>(null)
         private set
+    var stepsGoal by mutableStateOf(5000f)
+        private set
+    var sleepGoal by mutableStateOf(7.0)
+        private set
 
     init {
         viewModelScope.launch {
@@ -47,6 +51,9 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             sleepHours = totalSleepSeconds / 3600.0
         }
     }
+
+    fun updateStepsGoal(value: Float) { stepsGoal = value }
+    fun updateSleepGoal(value: Double) { sleepGoal = value }
 
     fun recommend() {
         val agent = AIAgent(

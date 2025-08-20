@@ -38,7 +38,7 @@ import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HealthSection(
+fun ProductivitySection(
     authVm: AuthViewModel,
     navController: NavController,
     chatViewModel: ChatViewModel,
@@ -57,7 +57,7 @@ fun HealthSection(
     val available = tasks.filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
 
     // Consider the user tired only when today's sleep is low or they have already walked a lot
-    val tired = vm.sleepHours!! < 7.0 || vm.steps!! > 5000
+    val tired = vm.sleepHours!! < vm.sleepGoal || vm.steps!! > vm.stepsGoal
     val recommended = if (available.isNotEmpty()) {
         val easiest = available.minByOrNull { it.difficulty.ordinal }
         val shortest = available.minByOrNull { it.estimatedMinutes }
@@ -76,13 +76,9 @@ fun HealthSection(
     val sleepHoursPart = sleepMinutes / 60
     val sleepMinutesPart = sleepMinutes % 60
 
-    // goals
-    val stepsGoal = 5000f
-    val sleepGoal = 7.0
-
     // progress (0..1)
-    val stepsProgress = (vm.steps!! / stepsGoal).coerceIn(0f, 1f)
-    val sleepProgress = (vm.sleepHours!! / sleepGoal).toFloat().coerceIn(0f, 1f)
+    val stepsProgress = (vm.steps!!.toFloat() / vm.stepsGoal).coerceIn(0f, 1f)
+    val sleepProgress = (vm.sleepHours!! / vm.sleepGoal).toFloat().coerceIn(0f, 1f)
 
     val scroll = rememberScrollState()
 
@@ -104,7 +100,7 @@ fun HealthSection(
                 title = "Steps",
                 icon = Icons.Filled.DirectionsWalk,
                 centerTop = "%,d".format(vm.steps),
-                centerBottom = "of ${stepsGoal.toInt()}",
+                centerBottom = "of ${vm.stepsGoal.toInt()}",
                 progress = stepsProgress,
                 ringSize = 140.dp,      // mai mic să încapă două pe un rând
                 ringStroke = 12.dp,
@@ -118,7 +114,7 @@ fun HealthSection(
                 title = "Sleep",
                 icon = Icons.Filled.Bedtime,
                 centerTop = "${sleepHoursPart}h ${sleepMinutesPart}m",
-                centerBottom = "goal ${sleepGoal.toInt()}h",
+                centerBottom = "goal ${vm.sleepGoal.toInt()}h",
                 progress = sleepProgress,
                 ringSize = 140.dp,
                 ringStroke = 12.dp,

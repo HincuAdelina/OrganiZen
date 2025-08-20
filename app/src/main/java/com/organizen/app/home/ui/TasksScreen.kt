@@ -310,7 +310,6 @@ fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        border = if (overdue) BorderStroke(1.dp, Color.Red) else null,
         colors = CardDefaults.cardColors(
             containerColor = if (task.completed) Color.LightGray else categoryColors[task.category] ?: MaterialTheme.colorScheme.surface
         )
@@ -374,18 +373,10 @@ fun TaskCard(task: Task, onCheckedChange: (Boolean) -> Unit, onClick: () -> Unit
                 )
                 Spacer(Modifier.width(2.dp))
                 Text("${task.estimatedMinutes}m", style = MaterialTheme.typography.bodySmall)
-                if (dueToday) {
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.PriorityHigh,
-                        contentDescription = "Due today",
-                        tint = Color.Red,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
             }
             Text(
-                task.deadline.toString(),
+                if (dueToday) "Today" else task.deadline.toString(),
+                color = if (dueToday) Color.Red else Color.Unspecified,
                 modifier = Modifier.align(Alignment.BottomEnd),
                 style = MaterialTheme.typography.bodySmall
             )
