@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class ChatViewModel: ViewModel() {
     var uiState: MutableStateFlow<ChatViewState> = MutableStateFlow(ChatViewState())
@@ -62,6 +63,42 @@ class ChatViewModel: ViewModel() {
                     it.copy(agentIsTyping = false)
                 }
             }
+        }
+    }
+
+    fun sendProductivityReport(tasks: List<Task>, steps: Long?, sleepHours: Double?) {
+        if (uiState.value.agentIsTyping) {
+            return
+        }
+        addMessage("How productive I was today?", MessageType.USER)
+        uiState.update { it.copy(agentIsTyping = true) }
+        viewModelScope.launch(Dispatchers.Default) {
+            val today = LocalDate.now()
+            val completedToday = tasks.filter { it.completed && it.deadline == today }
+            val taskPoints = completedToday.sumOf {
+                when (it.difficulty) {
+                    Difficulty.EASY -> 1
+                    Difficulty.MEDIUM -> 2
+                    Difficulty.HARD -> 3
+                }
+            }
+            val stepsGoal = 5000.0
+            val sleepGoal = 7.0
+            val stepsScore = (steps ?: 0L) / stepsGoal
+            val sleepScore = (sleepHours ?: 0.0) / sleepGoal
+            val productivityScore = taskPoints + stepsScore + sleepScore
+            val breakdown = completedToday.groupingBy { it.difficulty }
+                .eachCount()
+                .entries.joinToString(", ") {
+                    "${it.value} ${it.key.name.lowercase()}"
+                }
+            val reply = buildString {
+                append("You've completed ${completedToday.size} tasks today")
+                if (breakdown.isNotBlank()) append(" (" + breakdown + ")")
+                append(". Steps: ${(steps ?: 0L)}/5000, Sleep: ${String.format("%.1f", sleepHours ?: 0.0)}h of 7h.")
+                append(" Productivity score: ${String.format("%.2f", productivityScore)}")
+            }
+            addMessage(reply, MessageType.TOOL, false)
         }
     }
 }

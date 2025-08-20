@@ -3,10 +3,12 @@ package com.organizen.app.home.ui
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -29,7 +31,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.ChatViewModel
+import com.organizen.app.home.data.HealthViewModel
+import com.organizen.app.home.data.TasksViewModel
 import com.organizen.app.home.models.Message
 import com.organizen.app.home.models.MessageType
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -38,6 +43,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun ChatSection(
     modifier: Modifier = Modifier,
     chatViewModel: ChatViewModel = viewModel(),
+    authVm: AuthViewModel,
+    tasksVm: TasksViewModel,
+    healthVm: HealthViewModel = viewModel(),
 ) {
     val uiState by chatViewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -91,12 +99,48 @@ fun ChatSection(
 
         Spacer(Modifier.height(8.dp))
 
+        QuickSuggestions(
+            onMindfulness = { chatViewModel.sendMessage("Mindfullness") },
+            onProductivity = {
+                val userId = authVm.currentUser?.uid ?: "guest"
+                val steps = healthVm.steps
+                val sleep = healthVm.sleepHours
+                chatViewModel.sendProductivityReport(
+                    tasksVm.tasksFor(userId),
+                    steps,
+                    sleep
+                )
+            }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
         // INPUT BAR
         ChatInputBar(
             onSend = { text ->
                 if (text.isNotBlank()) chatViewModel.sendMessage(text)
             }
         )
+    }
+}
+
+@Composable
+private fun QuickSuggestions(
+    onMindfulness: () -> Unit,
+    onProductivity: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedButton(onClick = onMindfulness) {
+            Text("Mindfullness")
+        }
+        OutlinedButton(onClick = onProductivity) {
+            Text("How productive I was today?")
+        }
     }
 }
 
