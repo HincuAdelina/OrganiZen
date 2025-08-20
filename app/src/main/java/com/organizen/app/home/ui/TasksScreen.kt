@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
@@ -82,7 +83,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
             var list = tasks.toList()
             categoryFilter?.let { cat -> list = list.filter { it.category == cat } }
             difficultyFilter?.let { diff -> list = list.filter { it.difficulty == diff } }
-            when (sortOption) {
+            list = when (sortOption) {
                 SortOption.DIFFICULTY_ASC -> list.sortedBy { it.difficulty.ordinal }
                 SortOption.DIFFICULTY_DESC -> list.sortedByDescending { it.difficulty.ordinal }
                 SortOption.TIME_ASC -> list.sortedBy { it.estimatedMinutes }
@@ -91,6 +92,8 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                 SortOption.DEADLINE_DESC -> list.sortedByDescending { it.deadline }
                 SortOption.DEFAULT -> list
             }
+            val (pending, done) = list.partition { !it.completed }
+            pending + done
         }
     }
     Scaffold(
@@ -202,17 +205,19 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
 
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn {
+            val listState = rememberLazyListState()
+            LaunchedEffect(sortOption) { listState.scrollToItem(0) }
+            LazyColumn(state = listState) {
                 items(displayTasks, key = { it.id }) { task ->
                     val dismissState = rememberDismissState { value ->
                         if (value == DismissValue.DismissedToStart) {
                             tasksVm.removeTask(userId, task.id)
                         }
                         true
-                }
-                SwipeToDismiss(
-                    state = dismissState,
-                    directions = setOf(DismissDirection.EndToStart),
+                    }
+                    SwipeToDismiss(
+                        state = dismissState,
+                        directions = setOf(DismissDirection.EndToStart),
                     dismissThresholds = {
                         FixedThreshold(100.dp)
                     },

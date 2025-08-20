@@ -22,7 +22,11 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     fun upsertTask(userId: String, task: Task) {
         val tasks = tasksFor(userId)
         val index = tasks.indexOfFirst { it.id == task.id }
-        if (index >= 0) tasks[index] = task else tasks.add(task)
+        if (index >= 0) {
+            tasks[index] = task
+        } else {
+            if (task.completed) tasks.add(task) else tasks.add(0, task)
+        }
         saveTasks(userId)
     }
 
@@ -35,8 +39,8 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         val tasks = tasksFor(userId)
         val index = tasks.indexOfFirst { it.id == taskId }
         if (index >= 0) {
-            val t = tasks[index]
-            tasks[index] = t.copy(completed = done)
+            val t = tasks.removeAt(index).copy(completed = done)
+            if (done) tasks.add(t) else tasks.add(0, t)
             saveTasks(userId)
         }
     }

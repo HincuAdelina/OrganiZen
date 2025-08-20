@@ -9,6 +9,7 @@ import ai.koog.agents.core.tools.reflect.tools
 import ai.koog.prompt.executor.llms.all.simpleOllamaAIExecutor
 import ai.koog.prompt.llm.OllamaModels
 import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,14 +26,15 @@ import java.time.temporal.ChronoUnit
 
 class HealthViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = HealthRepository(application)
+    private val prefs = application.getSharedPreferences("targets", Context.MODE_PRIVATE)
 
     var steps by mutableStateOf<Long?>(null)
         private set
     var sleepHours by mutableStateOf<Double?>(null)
         private set
-    var stepsGoal by mutableStateOf(5000f)
+    var stepsGoal by mutableStateOf(prefs.getFloat("stepsGoal", 5000f))
         private set
-    var sleepGoal by mutableStateOf(7.0)
+    var sleepGoal by mutableStateOf(prefs.getFloat("sleepGoal", 7f).toDouble())
         private set
 
     init {
@@ -52,8 +54,14 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun updateStepsGoal(value: Float) { stepsGoal = value }
-    fun updateSleepGoal(value: Double) { sleepGoal = value }
+    fun updateStepsGoal(value: Float) {
+        stepsGoal = value
+        prefs.edit().putFloat("stepsGoal", value).apply()
+    }
+    fun updateSleepGoal(value: Double) {
+        sleepGoal = value
+        prefs.edit().putFloat("sleepGoal", value.toFloat()).apply()
+    }
 
     fun recommend() {
         val agent = AIAgent(

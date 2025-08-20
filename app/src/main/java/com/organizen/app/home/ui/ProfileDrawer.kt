@@ -28,7 +28,9 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     val healthVm: HealthViewModel = viewModel()
+    var editingSteps by remember { mutableStateOf(false) }
     var stepsTargetText by remember { mutableStateOf(healthVm.stepsGoal.toInt().toString()) }
+    var editingSleep by remember { mutableStateOf(false) }
     var sleepTargetText by remember { mutableStateOf(healthVm.sleepGoal.toString()) }
 
     Column(
@@ -63,26 +65,36 @@ fun ProfileDrawerContent(vm: AuthViewModel, onLogout: () -> Unit, onClose: () ->
             Spacer(Modifier.height(24.dp))
             Text("Set your targets", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = stepsTargetText,
-                onValueChange = {
-                    stepsTargetText = it
-                    it.toFloatOrNull()?.let { value -> healthVm.updateStepsGoal(value) }
+            EditableRow(
+                value = if (editingSteps) stepsTargetText else healthVm.stepsGoal.toInt().toString(),
+                editing = editingSteps,
+                label = "Steps target",
+                onValueChange = { stepsTargetText = it },
+                onEdit = {
+                    stepsTargetText = healthVm.stepsGoal.toInt().toString()
+                    editingSteps = true
                 },
-                label = { Text("Steps target") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                onSave = {
+                    stepsTargetText.toFloatOrNull()?.let { healthVm.updateStepsGoal(it) }
+                    editingSteps = false
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = sleepTargetText,
-                onValueChange = {
-                    sleepTargetText = it
-                    it.toDoubleOrNull()?.let { value -> healthVm.updateSleepGoal(value) }
+            EditableRow(
+                value = if (editingSleep) sleepTargetText else healthVm.sleepGoal.toString(),
+                editing = editingSleep,
+                label = "Sleep hours target",
+                onValueChange = { sleepTargetText = it },
+                onEdit = {
+                    sleepTargetText = healthVm.sleepGoal.toString()
+                    editingSleep = true
                 },
-                label = { Text("Sleep hours target") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                onSave = {
+                    sleepTargetText.toDoubleOrNull()?.let { healthVm.updateSleepGoal(it) }
+                    editingSleep = false
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
 
@@ -190,6 +202,7 @@ private fun EditableRow(
     onValueChange: (String) -> Unit,
     onEdit: () -> Unit,
     onSave: () -> Unit,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (editing) {
@@ -197,7 +210,8 @@ private fun EditableRow(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
-                label = { Text(label) }
+                label = { Text(label) },
+                keyboardOptions = keyboardOptions
             )
             IconButton(onClick = onSave) {
                 Icon(Icons.Filled.Check, contentDescription = "Save")
