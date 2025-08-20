@@ -3,9 +3,9 @@ package com.organizen.app.home.data
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.llms.all.simpleOllamaAIExecutor
 import ai.koog.prompt.llm.OllamaModels
+import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.BuildConfig
 import com.organizen.app.home.models.Message
 import com.organizen.app.home.models.MessageType
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +66,7 @@ class ChatViewModel: ViewModel() {
         }
     }
 
+    @SuppressLint("DefaultLocale")
     fun sendProductivityReport(tasks: List<Task>, steps: Long?, sleepHours: Double?) {
         if (uiState.value.agentIsTyping) {
             return
@@ -80,7 +81,7 @@ class ChatViewModel: ViewModel() {
                     Difficulty.EASY -> 1
                     Difficulty.MEDIUM -> 2
                     Difficulty.HARD -> 3
-                }
+                } as Int
             }
             val stepsGoal = 5000.0
             val sleepGoal = 7.0
@@ -94,7 +95,7 @@ class ChatViewModel: ViewModel() {
                 }
             val reply = buildString {
                 append("You've completed ${completedToday.size} tasks today")
-                if (breakdown.isNotBlank()) append(" (" + breakdown + ")")
+                if (breakdown.isNotBlank()) append(" ($breakdown)")
                 append(". Steps: ${(steps ?: 0L)}/5000, Sleep: ${String.format("%.1f", sleepHours ?: 0.0)}h of 7h.")
                 append(" Productivity score: ${String.format("%.2f", productivityScore)}")
             }
