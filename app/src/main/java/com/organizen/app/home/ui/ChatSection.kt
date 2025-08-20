@@ -103,8 +103,8 @@ fun ChatSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(onClick = { chatViewModel.sendMessage("Mindfulness") }) {
-                Text("Mindfulness")
+            OutlinedButton(onClick = { chatViewModel.sendMessage("Mindfullness tips") }) {
+                Text("Mindfullness tips")
             }
             OutlinedButton(onClick = {
                 chatViewModel.addUserMessage("How productive I was today?")
@@ -128,10 +128,12 @@ fun ChatSection(
                     }
                 }
                 val taskScore = if (totalPoints == 0) 0.0 else completedPoints.toDouble() / totalPoints
-                val stepsScore = (healthViewModel.steps?.toDouble() ?: 0.0) / healthViewModel.stepsGoal
-                val sleepScore = (healthViewModel.sleepHours ?: 0.0) / healthViewModel.sleepGoal
-                val productivity = ((taskScore + stepsScore + sleepScore) / 3.0 * 100).roundToInt()
-                val msg = "Tasks done: ${easy + med + hard}/${tasks.size} (easy $easy, medium $med, hard $hard). Steps ${(healthViewModel.steps ?: 0L)}/${healthViewModel.stepsGoal.toInt()} (${(stepsScore*100).roundToInt()}%). Sleep ${"%.1f".format(healthViewModel.sleepHours ?: 0.0)}/${healthViewModel.sleepGoal}h (${(sleepScore*100).roundToInt()}%). Productivity score $productivity%."
+                val stepsRatio = (healthViewModel.steps?.toDouble() ?: 0.0) / healthViewModel.stepsGoal
+                val stepsScore = stepsRatio.coerceAtMost(1.0)
+                val sleepRatio = (healthViewModel.sleepHours ?: 0.0) / healthViewModel.sleepGoal
+                val sleepScore = if (sleepRatio <= 1) sleepRatio else (2 - sleepRatio).coerceAtLeast(0.0)
+                val productivity = ((taskScore * 0.5 + stepsScore * 0.25 + sleepScore * 0.25) * 100).roundToInt()
+                val msg = "Tasks done: ${easy + med + hard}/${tasks.size} (easy $easy, medium $med, hard $hard) – ${(taskScore*100).roundToInt()}%. Steps progress ${(stepsRatio*100).roundToInt()}%. Sleep progress ${(sleepScore*100).roundToInt()}%. Productivity score $productivity%."
                 chatViewModel.addAssistantMessage(msg)
             }) {
                 Text("How productive I was today?")
