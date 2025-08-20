@@ -118,14 +118,14 @@ fun ChatSection(
                         Difficulty.EASY -> 1
                         Difficulty.MEDIUM -> 2
                         Difficulty.HARD -> 3
-                    }
+                    } as Int
                 }
                 val completedPoints = tasks.filter { it.completed }.sumOf {
                     when (it.difficulty) {
                         Difficulty.EASY -> 1
                         Difficulty.MEDIUM -> 2
                         Difficulty.HARD -> 3
-                    }
+                    } as Int
                 }
                 val taskScore = if (totalPoints == 0) 0.0 else completedPoints.toDouble() / totalPoints
                 val stepsRatio = (healthViewModel.steps?.toDouble() ?: 0.0) / healthViewModel.stepsGoal
