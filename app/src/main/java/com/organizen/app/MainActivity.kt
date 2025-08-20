@@ -10,6 +10,7 @@ import com.organizen.app.auth.AuthViewModel
 import com.organizen.app.home.data.HealthRepository
 import com.organizen.app.navigation.AppNavGraph
 import com.organizen.app.theme.OrganiZenTheme
+import com.organizen.app.notifications.TaskReminderReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
             val repo = HealthRepository(this@MainActivity)
             repo.readStepsInputs(Instant.now().minusSeconds(235673433), Instant.now())
         }
+        TaskReminderReceiver.schedule(this)
         // icon animation after splash screen
         splash.setOnExitAnimationListener { splashViewProvider ->
             val v = splashViewProvider.iconView
