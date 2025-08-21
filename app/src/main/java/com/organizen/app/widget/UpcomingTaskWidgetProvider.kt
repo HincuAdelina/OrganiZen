@@ -1,9 +1,15 @@
 package com.organizen.app.widget
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.view.View
 import android.widget.RemoteViews
+import com.organizen.app.MainActivity
 import com.organizen.app.R
 import com.organizen.app.home.data.Task
 import com.organizen.app.home.data.Category
@@ -11,37 +17,84 @@ import com.organizen.app.home.data.Difficulty
 import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONArray
 import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 class UpcomingTaskWidgetProvider : AppWidgetProvider() {
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
-        }
+        appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it) }
     }
 
     companion object {
         private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.upcoming_task_widget)
+
+            // tap pe card -> deschide aplicația
+            val intent = Intent(context, MainActivity::class.java)
+            val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+            views.setOnClickPendingIntent(R.id.widget_root, pending)
+
             val task = loadTasks(context)
                 .filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
                 .minByOrNull { it.deadline }
+
             if (task != null) {
-                val category = task.category.name.lowercase().replaceFirstChar { it.uppercase() }
-                val difficulty = task.difficulty.name.lowercase().replaceFirstChar { it.uppercase() }
+                val categoryLabel = task.category.name.lowercase()
+                    .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                val diffLabel = task.difficulty.name.lowercase()
+                    .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+
+                // descriere
                 views.setTextViewText(R.id.widget_task_description, task.description)
-                views.setTextViewText(R.id.widget_task_category, "Category: $category")
-                views.setTextViewText(R.id.widget_task_difficulty, "Difficulty: $difficulty")
-                views.setTextViewText(R.id.widget_task_time, "Time: ${task.estimatedMinutes} min")
-                views.setTextViewText(R.id.widget_task_deadline, "Deadline: ${task.deadline}")
+
+                // chip-uri
+                views.setTextViewText(R.id.widget_task_category, categoryLabel)
+                views.setTextViewText(R.id.widget_task_time, context.getString(R.string.minutes_short, task.estimatedMinutes))
+
+                // deadline prietenos
+                val due = formatDue(context, task.deadline)
+                views.setTextViewText(R.id.widget_task_deadline, context.getString(R.string.due_prefix, due))
+
+                // bulină dificultate + text (ex: "● Hard")
+                val bullet = "\u25CF"
+                views.setTextViewText(R.id.widget_task_difficulty, "$bullet $diffLabel")
+                views.setTextColor(R.id.widget_task_difficulty, colorFor(task.difficulty))
+
+                // vizibil tot
+                views.setViewVisibility(R.id.widget_info_row, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_deadline_row, View.VISIBLE)
             } else {
                 val msg = context.getString(R.string.no_upcoming_tasks)
                 views.setTextViewText(R.id.widget_task_description, msg)
                 views.setTextViewText(R.id.widget_task_category, "")
-                views.setTextViewText(R.id.widget_task_difficulty, "")
                 views.setTextViewText(R.id.widget_task_time, "")
                 views.setTextViewText(R.id.widget_task_deadline, "")
+                views.setTextViewText(R.id.widget_task_difficulty, "")
+
+                // ascunde rândurile de detalii
+                views.setViewVisibility(R.id.widget_info_row, View.GONE)
+                views.setViewVisibility(R.id.widget_deadline_row, View.GONE)
             }
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        private fun formatDue(context: Context, date: LocalDate): String {
+            val today = LocalDate.now()
+            return when (date) {
+                today -> context.getString(R.string.today)
+                today.plusDays(1) -> context.getString(R.string.tomorrow)
+                in today.plusDays(2)..today.plusDays(6) ->
+                    date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                else -> date.toString()
+            }
+        }
+
+        private fun colorFor(diff: Difficulty): Int = when (diff) {
+            Difficulty.EASY -> Color.parseColor("#4CAF50")  // green 500
+            Difficulty.MEDIUM -> Color.parseColor("#FFC107")// amber 500
+            Difficulty.HARD -> Color.parseColor("#F44336")  // red 500
         }
 
         private fun loadTasks(context: Context): List<Task> {
