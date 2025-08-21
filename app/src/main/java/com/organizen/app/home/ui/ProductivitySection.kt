@@ -154,6 +154,7 @@ fun ProductivitySection(
                 endColor = MaterialTheme.colorScheme.secondary
             )
         }
+        UpcomingTaskWidget(authVm = authVm, tasksVm = tasksVm)
 
         // ——— Recomandare + buton ———
         recommended?.let { task ->
