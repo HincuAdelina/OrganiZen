@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             val repo = HealthRepository(this@MainActivity)
             repo.readStepsInputs(Instant.now().minusSeconds(235673433), Instant.now())
+            repo.readStepsInputs(Instant.now().minusSeconds(235673433), Instant.now())
         }
         // icon animation after splash screen
         splash.setOnExitAnimationListener { splashViewProvider ->

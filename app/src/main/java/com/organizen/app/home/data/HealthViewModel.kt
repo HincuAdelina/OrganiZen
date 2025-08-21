@@ -11,7 +11,6 @@ import ai.koog.prompt.llm.OllamaModels
 import android.app.Application
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,7 +19,7 @@ import androidx.lifecycle.viewModelScope
 import com.organizen.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.time.Duration
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -42,19 +41,24 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         private set
 
     init {
-        viewModelScope.launch {
-            val zone = ZoneId.systemDefault()
-            val start = LocalDate.now().atStartOfDay(zone).toInstant()
-            val end = start.plus(1, ChronoUnit.DAYS)
+        // citește pentru ziua curentă în EEST (Europe/Bucharest)
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshToday()
+        }
+    }
 
-            val stepRecords = repo.readStepsInputs(start, end)
-            steps = stepRecords.sumOf { it.count.toLong() }
+    /** Re-calculează steps & sleep pentru ziua curentă (00:00→24:00) în EEST,
+     *  iar pentru somn include și porțiunea de dinainte de 00:00 pentru sesiunile care trec peste miezul nopții. */
+    suspend fun refreshToday(zone: ZoneId = ZoneId.of("Europe/Bucharest")) {
+        val dayStart = LocalDate.now(zone).atStartOfDay(zone).toInstant()
+        val dayEnd = dayStart.plus(1, ChronoUnit.DAYS)
 
-            val sleepRecords = repo.readSleepInputs(start, end)
-            val totalSleepSeconds = sleepRecords.sumOf {
-                Duration.between(it.startTime, it.endTime).seconds
-            }
-            sleepHours = totalSleepSeconds / 3600.0
+        val stepsCount = repo.readStepsInputs(dayStart, dayEnd)
+        val sleepMin = repo.readSleepMinutesIncludingPrev(dayStart, dayEnd) // <-- include minutelor „anterioare”
+
+        withContext(Dispatchers.Main) {
+            steps = stepsCount.toLong()
+            sleepHours = sleepMin / 60.0
         }
     }
 
@@ -62,41 +66,33 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         stepsGoal = value
         prefs.edit().putFloat(stepsKey, value).apply()
     }
+
     fun updateSleepGoal(value: Double) {
         sleepGoal = value
         prefs.edit().putFloat(sleepKey, value.toFloat()).apply()
     }
+
 
     fun recommend() {
         val agent = AIAgent(
             executor = simpleOllamaAIExecutor(BuildConfig.default_account_iccid),
             systemPrompt = "You are a helpful assistant. Answer user questions concisely.",
             llmModel = OllamaModels.Meta.LLAMA_3_2_3B,
-            toolRegistry = ToolRegistry {
-                tools(CalculatorTools())
-            },
+            toolRegistry = ToolRegistry { tools(CalculatorTools()) },
         )
-
         viewModelScope.launch(Dispatchers.IO) {
             println(agent.run("What's 1 + 2"))
         }
     }
 }
 
-
-// Implement a simple calculator tool that can add two numbers
+/** Exemplu de tool simplu pentru agentul AI. */
 @LLMDescription("Tools for performing basic arithmetic operations")
 class CalculatorTools : ToolSet {
     @Tool
     @LLMDescription("Add two numbers together and return their sum")
     fun add(
-        @LLMDescription("First number to add (integer value)")
-        num1: Int,
-
-        @LLMDescription("Second number to add (integer value)")
-        num2: Int
-    ): String {
-        val sum = num1 + num2
-        return "The sum of $num1 and $num2 is: $sum"
-    }
+        @LLMDescription("First number to add (integer value)") num1: Int,
+        @LLMDescription("Second number to add (integer value)") num2: Int
+    ): String = "The sum of $num1 and $num2 is: ${num1 + num2}"
 }
