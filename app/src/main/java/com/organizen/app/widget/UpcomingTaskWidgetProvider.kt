@@ -22,13 +22,23 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
     companion object {
         private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.upcoming_task_widget)
-            val task = loadTasks(context).filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
+            val task = loadTasks(context)
+                .filter { !it.completed && !it.deadline.isBefore(LocalDate.now()) }
                 .minByOrNull { it.deadline }
             if (task != null) {
+                val category = task.category.name.lowercase().replaceFirstChar { it.uppercase() }
+                val difficulty = task.difficulty.name.lowercase().replaceFirstChar { it.uppercase() }
                 views.setTextViewText(R.id.widget_task_description, task.description)
-                views.setTextViewText(R.id.widget_task_deadline, task.deadline.toString())
+                views.setTextViewText(R.id.widget_task_category, "Category: $category")
+                views.setTextViewText(R.id.widget_task_difficulty, "Difficulty: $difficulty")
+                views.setTextViewText(R.id.widget_task_time, "Time: ${task.estimatedMinutes} min")
+                views.setTextViewText(R.id.widget_task_deadline, "Deadline: ${task.deadline}")
             } else {
-                views.setTextViewText(R.id.widget_task_description, context.getString(R.string.no_upcoming_tasks))
+                val msg = context.getString(R.string.no_upcoming_tasks)
+                views.setTextViewText(R.id.widget_task_description, msg)
+                views.setTextViewText(R.id.widget_task_category, "")
+                views.setTextViewText(R.id.widget_task_difficulty, "")
+                views.setTextViewText(R.id.widget_task_time, "")
                 views.setTextViewText(R.id.widget_task_deadline, "")
             }
             appWidgetManager.updateAppWidget(appWidgetId, views)
