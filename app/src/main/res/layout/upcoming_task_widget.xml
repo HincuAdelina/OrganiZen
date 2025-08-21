@@ -1,21 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:orientation="vertical"
     android:padding="16dp"
+    android:background="@drawable/widget_card_bg"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/widget_task_description"
-        android:textStyle="bold"
-        android:textSize="16sp"
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/no_upcoming_tasks" />
+        android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/widget_task_deadline"
+        <CheckBox
+            android:id="@+id/widget_task_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/widget_task_difficulty"
+            android:text="\u25CF"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/widget_task_description"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginStart="4dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/no_upcoming_tasks" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_info_container"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="14sp" />
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/widget_task_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/widget_task_estimated"
+            android:layout_marginStart="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/widget_task_deadline"
+            android:layout_marginStart="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
 </LinearLayout>
