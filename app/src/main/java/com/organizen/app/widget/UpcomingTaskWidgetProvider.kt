@@ -26,7 +26,37 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it) }
     }
 
+    // 🔹 Prinde refresh-urile trimise din aplicație
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        when (intent.action) {
+            ACTION_REFRESH,
+            AppWidgetManager.ACTION_APPWIDGET_UPDATE -> updateAll(context)
+        }
+    }
+
+    // 🔹 Actualizează toate instanțele widgetului
+    private fun updateAll(context: Context) {
+        val mgr = AppWidgetManager.getInstance(context)
+        val ids = mgr.getAppWidgetIds(ComponentName(context, UpcomingTaskWidgetProvider::class.java))
+        ids.forEach { updateAppWidget(context, mgr, it) }
+    }
+
     companion object {
+        // 🔹 Acțiune custom pt. refresh
+        const val ACTION_REFRESH = "com.organizen.app.widget.REFRESH"
+
+        // 🔹 Apeleaz-o din app după ce salvezi/editezi taskuri
+        fun requestRefresh(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, UpcomingTaskWidgetProvider::class.java))
+            val i = Intent(context, UpcomingTaskWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            }
+            context.sendBroadcast(i)
+        }
+
         private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.upcoming_task_widget)
 
@@ -40,12 +70,9 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
                 .minByOrNull { it.deadline }
 
             if (task != null) {
-                val categoryLabel = task.category.name.lowercase()
-                    .replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                val diffLabel = task.difficulty.name.lowercase()
-                    .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                val categoryLabel = task.category.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                val diffLabel = task.difficulty.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }
 
-                // descriere
                 views.setTextViewText(R.id.widget_task_description, task.description)
 
                 // chip-uri
@@ -56,12 +83,11 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
                 val due = formatDue(context, task.deadline)
                 views.setTextViewText(R.id.widget_task_deadline, context.getString(R.string.due_prefix, due))
 
-                // bulină dificultate + text (ex: "● Hard")
+                // bulină dificultate + text
                 val bullet = "\u25CF"
                 views.setTextViewText(R.id.widget_task_difficulty, "$bullet $diffLabel")
                 views.setTextColor(R.id.widget_task_difficulty, colorFor(task.difficulty))
 
-                // vizibil tot
                 views.setViewVisibility(R.id.widget_info_row, View.VISIBLE)
                 views.setViewVisibility(R.id.widget_deadline_row, View.VISIBLE)
             } else {
@@ -71,8 +97,6 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_task_time, "")
                 views.setTextViewText(R.id.widget_task_deadline, "")
                 views.setTextViewText(R.id.widget_task_difficulty, "")
-
-                // ascunde rândurile de detalii
                 views.setViewVisibility(R.id.widget_info_row, View.GONE)
                 views.setViewVisibility(R.id.widget_deadline_row, View.GONE)
             }
@@ -92,9 +116,9 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
         }
 
         private fun colorFor(diff: Difficulty): Int = when (diff) {
-            Difficulty.EASY -> Color.parseColor("#4CAF50")  // green 500
-            Difficulty.MEDIUM -> Color.parseColor("#FFC107")// amber 500
-            Difficulty.HARD -> Color.parseColor("#F44336")  // red 500
+            Difficulty.EASY -> Color.parseColor("#4CAF50")
+            Difficulty.MEDIUM -> Color.parseColor("#FFC107")
+            Difficulty.HARD -> Color.parseColor("#F44336")
         }
 
         private fun loadTasks(context: Context): List<Task> {

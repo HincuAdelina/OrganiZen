@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
+import com.organizen.app.widget.UpcomingTaskWidgetProvider
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
@@ -71,6 +72,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
     val userId = vm.currentUser?.uid ?: "guest"
     val tasks = tasksVm.tasksFor(userId)
     var editingTask by remember { mutableStateOf<Task?>(null) }
+    val context = LocalContext.current.applicationContext
     var showDialog by remember { mutableStateOf(false) }
     var showDatePicker = remember { mutableStateOf(false) }
 
@@ -239,7 +241,10 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                     dismissContent = {
                         TaskCard(
                             task = task,
-                            onCheckedChange = { done -> tasksVm.setDone(userId, task.id, done) },
+                            onCheckedChange = { done ->
+                                tasksVm.setDone(userId, task.id, done)
+                                UpcomingTaskWidgetProvider.requestRefresh(context) // <— actualizează widgetul
+                            },
                             onClick = { editingTask = task; showDialog = true }
                         )
                     }
@@ -255,6 +260,7 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
             showDatePicker = showDatePicker,
             onSave = {
                 tasksVm.upsertTask(userId, it)
+                UpcomingTaskWidgetProvider.requestRefresh(context)
                 showDialog = false
                 editingTask = null
             }

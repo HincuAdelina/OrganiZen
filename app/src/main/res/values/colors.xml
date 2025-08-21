@@ -18,4 +18,7 @@
     <color name="color_on_background_dark">#FFFFFF</color>
     <color name="status_bar_dark">#121212</color>
     <color name="nav_bar_dark">#000000</color>
+
+    <color name="widget_text_primary">#E6000000</color>
+    <color name="widget_text_secondary">#99000000</color>
 </resources>
