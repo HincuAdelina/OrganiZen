@@ -59,32 +59,18 @@ fun ProductivitySection(
     }
 
     val context = LocalContext.current
-    if (!hasUsageStatsPermission(context)) {
-        Column(
-            Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Usage access is required to display app usage stats.")
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = {
-                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            }) {
-                Text("Grant permission")
-            }
-        }
-        return
-    }
-
-    val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)
-    val endTime = System.currentTimeMillis()
-    val startTime = endTime - 24 * 60 * 60 * 1000
-    val usageStats = usageStatsManager.queryUsageStats(
-        UsageStatsManager.INTERVAL_DAILY,
-        startTime,
-        endTime
-    )
-    val totalUsageMinutes = (usageStats.sumOf { it.totalTimeInForeground } / 60000L).toInt()
+    val hasUsagePermission = hasUsageStatsPermission(context)
+    val totalUsageMinutes = if (hasUsagePermission) {
+        val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)
+        val endTime = System.currentTimeMillis()
+        val startTime = endTime - 24 * 60 * 60 * 1000
+        val usageStats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        (usageStats.sumOf { it.totalTimeInForeground } / 60000L).toInt()
+    } else null
 
     val userId = authVm.currentUser?.uid ?: "guest"
     val tasks = tasksVm.tasksFor(userId)
@@ -127,11 +113,29 @@ fun ProductivitySection(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            "Screen time last 24h: ${'$'}{totalUsageMinutes}m",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+        if (hasUsagePermission) {
+            Text(
+                "Screen time last 24h: ${'$'}{totalUsageMinutes}m",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        } else {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Usage access is required to display app usage stats.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }) {
+                    Text("Grant permission")
+                }
+            }
+        }
 
         // ——— două inele pe același rând (fără Card în spate) ———
         Row(
