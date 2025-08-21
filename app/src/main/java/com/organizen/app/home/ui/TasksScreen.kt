@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
 import java.time.Instant
 import java.time.ZoneId
@@ -225,15 +226,23 @@ fun TasksScreen(vm: AuthViewModel, tasksVm: TasksViewModel = viewModel()) {
                     },
                     background = {
                         if (dismissState.targetValue == DismissValue.DismissedToStart) {
+                            val cardShape = CardDefaults.shape
                             Box(
-                                Modifier
+                                modifier = Modifier
                                     .fillMaxSize()
-                                    .background(Color.Red.copy(alpha = 0.3f))
-                                    .padding(vertical = 4.dp),
+                                    .clip(cardShape)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        shape = cardShape
+                                    ),
                                 contentAlignment = Alignment.CenterEnd
-                            )
-                            {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.padding(8.dp))
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(16.dp)
+                                )
                             }
                         }
 
