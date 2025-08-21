@@ -28,8 +28,8 @@
         </activity>
 
         <receiver
-            android:name=".widget.UpcomingTaskWidgetProvider"
-            android:exported="false">
+            android:name=".widget.UpcomingTaskWidgetReceiver"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

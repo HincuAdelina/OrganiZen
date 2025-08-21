@@ -83,6 +83,9 @@ dependencies {
     // Add a dependency of Health Connect SDK
     implementation (libs.androidx.connect.client)
 
+    // Glance for home-screen widgets
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+
     // Teste
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
