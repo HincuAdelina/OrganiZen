@@ -1,6 +1,9 @@
 package com.organizen.app.home.ui
 
+import android.app.usage.UsageStatsManager
 import android.os.Build
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -33,6 +36,7 @@ import com.organizen.app.home.data.HealthViewModel
 import com.organizen.app.home.data.TasksViewModel
 import com.organizen.app.navigation.BottomNavScreen
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.*
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -84,6 +88,27 @@ fun ProductivitySection(
     val sleepProgress = (vm.sleepHours!! / vm.sleepGoal).toFloat().coerceIn(0f, 1f)
 
     val scroll = rememberScrollState()
+    val context = LocalContext.current
+    val topUsage = remember(context) {
+        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val end = System.currentTimeMillis()
+        usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
+            .filter { it.totalTimeInForeground > 0 }
+            .sortedByDescending { it.totalTimeInForeground }
+            .take(3)
+            .map { stat ->
+                val appName = try {
+                    val pm = context.packageManager
+                    pm.getApplicationLabel(pm.getApplicationInfo(stat.packageName, 0)).toString()
+                } catch (e: Exception) {
+                    stat.packageName
+                }
+                val minutes = (stat.totalTimeInForeground / 60000L).toInt()
+                appName to minutes
+            }
+    }
+    val maxUsageMinutes = topUsage.maxOfOrNull { it.second } ?: 0
 
     Column(
         Modifier
@@ -140,6 +165,38 @@ fun ProductivitySection(
             }
         }
 
+        if (topUsage.isNotEmpty()) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Most used apps today", style = MaterialTheme.typography.titleMedium)
+                    topUsage.forEach { (name, minutes) ->
+                        val progress = if (maxUsageMinutes > 0) minutes / maxUsageMinutes.toFloat() else 0f
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(name, modifier = Modifier.width(100.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Box(Modifier.weight(1f).height(20.dp)) {
+                                LinearProgressIndicator(
+                                    progress = progress,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Text(
+                                    formatMinutes(minutes),
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Button(
             onClick = {
                 val prompt = if (tired) "Suggest a short relaxation exercise."
@@ -155,7 +212,13 @@ fun ProductivitySection(
         ) {
             Text(if (tired) "Get relax recommendations" else "Get productivity advice")
         }
-    }
+    } 
+}
+
+private fun formatMinutes(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
 
 /** Tile fără Card: titlu + inel cu gradient (start→end) și capete glow. */
