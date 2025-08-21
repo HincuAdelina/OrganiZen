@@ -84,7 +84,13 @@ dependencies {
     implementation (libs.androidx.connect.client)
 
     // Glance for home-screen widgets
-    implementation("androidx.glance:glance-appwidget:1.0.0")
+    implementation("androidx.glance:glance:1.2.0-alpha01")
+
+    // For AppWidgets support
+    implementation("androidx.glance:glance-appwidget:1.2.0-alpha01")
+
+    // For Wear-Tiles support
+    implementation("androidx.glance:glance-wear-tiles:1.0.0-alpha05")
 
     // Teste
     testImplementation(libs.junit)
