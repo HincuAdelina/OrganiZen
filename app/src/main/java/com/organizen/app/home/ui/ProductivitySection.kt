@@ -38,6 +38,11 @@ import com.organizen.app.navigation.BottomNavScreen
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.*
+import android.app.usage.UsageEvents
+import android.content.pm.PackageManager
+import android.content.Intent
+import androidx.compose.ui.geometry.CornerRadius
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -87,26 +92,27 @@ fun ProductivitySection(
     val stepsProgress = (vm.steps!!.toFloat() / vm.stepsGoal).coerceIn(0f, 1f)
     val sleepProgress = (vm.sleepHours!! / vm.sleepGoal).toFloat().coerceIn(0f, 1f)
 
+    // zona EEST
+    val zone = java.time.ZoneId.of("Europe/Bucharest")
+
+// cheie zilnică – se schimbă la miezul nopții local
+    var todayKey by remember { mutableStateOf(java.time.LocalDate.now(zone)) }
+
+// reprogramează refresh-ul exact la 00:00 local
+    LaunchedEffect(todayKey) {
+        val now = java.time.ZonedDateTime.now(zone)
+        val nextMidnight = todayKey.plusDays(1).atStartOfDay(zone)
+        val delayMs = java.time.Duration.between(now, nextMidnight).toMillis().coerceAtLeast(0)
+        kotlinx.coroutines.delay(delayMs)
+        todayKey = java.time.LocalDate.now(zone)
+    }
+
     val scroll = rememberScrollState()
     val context = LocalContext.current
-    val topUsage = remember(context) {
-        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val end = System.currentTimeMillis()
-        usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
-            .filter { it.totalTimeInForeground > 0 }
-            .sortedByDescending { it.totalTimeInForeground }
-            .take(3)
-            .map { stat ->
-                val appName = try {
-                    val pm = context.packageManager
-                    pm.getApplicationLabel(pm.getApplicationInfo(stat.packageName, 0)).toString()
-                } catch (e: Exception) {
-                    stat.packageName
-                }
-                val minutes = (stat.totalTimeInForeground / 60000L).toInt()
-                appName to minutes
-            }
+
+// ⬇️ înlocuiește blocul tău cu queryUsageStats cu acesta:
+    val topUsage = remember(todayKey, context) {
+        top3LaunchableAppsSinceMidnightUsingEvents(context, zone)
     }
     val maxUsageMinutes = topUsage.maxOfOrNull { it.second } ?: 0
 
@@ -181,16 +187,22 @@ fun ProductivitySection(
                             Text(name, modifier = Modifier.width(100.dp))
                             Spacer(Modifier.width(8.dp))
                             Box(Modifier.weight(1f).height(20.dp)) {
-                                LinearProgressIndicator(
+                                PillLinearProgress(
                                     progress = progress,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(end = 48.dp) // loc pentru eticheta de minute (ca să nu se suprapună)
                                 )
                                 Text(
                                     formatMinutes(minutes),
-                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 4.dp),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
+
+
                         }
                     }
                 }
@@ -341,5 +353,123 @@ private fun GoalRing(
 
         // centru (număr + sublabel)
         content()
+    }
+}
+
+
+
+private fun top3LaunchableAppsSinceMidnightUsingEvents(
+    context: Context,
+    zone: ZoneId
+): List<Pair<String, Int>> {
+    val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    val pm = context.packageManager
+
+    val start = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
+    val end = System.currentTimeMillis()
+
+    // 1) Pachete „launchable” (MAIN + LAUNCHER)
+    val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    val resolved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        pm.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION") pm.queryIntentActivities(launcherIntent, 0)
+    }
+    val launchablePkgs = resolved.map { it.activityInfo.packageName }.toSet()
+
+    // 2) Excluderi (fără propria aplicație!)
+    val exclude = setOf(
+        "com.android.systemui",
+        "com.google.android.apps.nexuslauncher",
+        "com.android.launcher",
+        "com.huawei.android.launcher",
+        "com.miui.home",
+        "com.sec.android.app.launcher",
+        "com.oneplus.launcher",
+        "com.oppo.launcher",
+        "com.vivo.launcher"
+    )
+
+    // 3) Calculează foreground time din evenimente
+    val resumedTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        setOf(UsageEvents.Event.ACTIVITY_RESUMED) else setOf(UsageEvents.Event.MOVE_TO_FOREGROUND)
+    val pausedTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        setOf(UsageEvents.Event.ACTIVITY_PAUSED) else setOf(UsageEvents.Event.MOVE_TO_BACKGROUND)
+
+    val openSince = mutableMapOf<String, Long>()
+    val totals = mutableMapOf<String, Long>()
+    val events = usm.queryEvents(start, end)
+    val e = UsageEvents.Event()
+
+    while (events.hasNextEvent()) {
+        events.getNextEvent(e)
+        val pkg = e.packageName ?: continue
+        val t = e.timeStamp
+        when (e.eventType) {
+            in resumedTypes -> openSince[pkg] = t
+            in pausedTypes -> openSince.remove(pkg)?.let { t0 ->
+                if (t >= t0) totals[pkg] = (totals[pkg] ?: 0L) + (t - t0)
+            }
+        }
+    }
+    // sesiuni încă deschise până la „end”
+    openSince.forEach { (pkg, t0) ->
+        totals[pkg] = (totals[pkg] ?: 0L) + (end - t0)
+    }
+
+    // 4)  Ținem DOAR aplicații launchable **SAU** propria aplicație; și scoatem excluderile
+    val myPkg = context.packageName
+    val filtered = totals.asSequence()
+        .filter { (pkg, ms) ->
+            ms > 0 && (pkg in launchablePkgs || pkg == myPkg) && pkg !in exclude
+        }
+
+    // 5) Map la (label, minute) și top 3
+    return filtered
+        .map { (pkg, ms) -> resolveAppLabel(pm, pkg) to (ms / 60_000L).toInt() }
+        .sortedByDescending { it.second }
+        .take(3)
+        .toList()
+}
+
+
+private fun resolveAppLabel(pm: PackageManager, pkg: String): String = try {
+    val ai = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        pm.getApplicationInfo(pkg, 0)
+    }
+    pm.getApplicationLabel(ai).toString()
+} catch (_: Exception) {
+    pkg
+}
+
+
+@Composable
+private fun PillLinearProgress(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant
+) {
+    Canvas(modifier) {
+        val p = progress.coerceIn(0f, 1f)
+        val radius = size.height / 2f
+
+        // track
+        drawRoundRect(
+            color = trackColor,
+            cornerRadius = CornerRadius(radius, radius)
+        )
+
+        // fill cu capete rotunjite (pill) la nivelul progresului
+        if (p > 0f) {
+            drawRoundRect(
+                color = color,
+                size = androidx.compose.ui.geometry.Size(width = size.width * p, height = size.height),
+                cornerRadius = CornerRadius(radius, radius)
+            )
+        }
     }
 }
