@@ -1,6 +1,12 @@
 package com.organizen.app.home.ui
 
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.os.Process
+import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -23,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +57,34 @@ fun ProductivitySection(
         }
         return
     }
+
+    val context = LocalContext.current
+    if (!hasUsageStatsPermission(context)) {
+        Column(
+            Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Usage access is required to display app usage stats.")
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = {
+                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }) {
+                Text("Grant permission")
+            }
+        }
+        return
+    }
+
+    val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)
+    val endTime = System.currentTimeMillis()
+    val startTime = endTime - 24 * 60 * 60 * 1000
+    val usageStats = usageStatsManager.queryUsageStats(
+        UsageStatsManager.INTERVAL_DAILY,
+        startTime,
+        endTime
+    )
+    val totalUsageMinutes = (usageStats.sumOf { it.totalTimeInForeground } / 60000L).toInt()
 
     val userId = authVm.currentUser?.uid ?: "guest"
     val tasks = tasksVm.tasksFor(userId)
@@ -92,6 +127,12 @@ fun ProductivitySection(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Text(
+            "Screen time last 24h: ${'$'}{totalUsageMinutes}m",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
         // ——— două inele pe același rând (fără Card în spate) ———
         Row(
             Modifier.fillMaxWidth(),
@@ -279,4 +320,14 @@ private fun GoalRing(
         // centru (număr + sublabel)
         content()
     }
+}
+
+private fun hasUsageStatsPermission(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+    val mode = appOps.checkOpNoThrow(
+        AppOpsManager.OPSTR_GET_USAGE_STATS,
+        Process.myUid(),
+        context.packageName
+    )
+    return mode == AppOpsManager.MODE_ALLOWED
 }
