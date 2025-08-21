@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OrganiZen</string>
+    <string name="no_upcoming_tasks">No upcoming tasks</string>
 </resources>
