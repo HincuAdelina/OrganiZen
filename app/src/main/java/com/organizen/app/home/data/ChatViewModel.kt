@@ -46,7 +46,7 @@ class ChatViewModel: ViewModel() {
                 val client = simpleOllamaAIExecutor(com.organizen.app.BuildConfig.default_account_iccid)
                 val response = client.execute(
                     prompt = prompt("prompt") {
-                        system("You are a helpful assistant.")
+                        system("You are a productivity coach. Be concise and effective.")
                         uiState.value.messages.forEach {
                             if (it.type == MessageType.USER) {
                                 user(it.message)
