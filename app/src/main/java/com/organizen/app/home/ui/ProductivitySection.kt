@@ -110,7 +110,6 @@ fun ProductivitySection(
     val scroll = rememberScrollState()
     val context = LocalContext.current
 
-// ⬇️ înlocuiește blocul tău cu queryUsageStats cu acesta:
     val topUsage = remember(todayKey, context) {
         top3LaunchableAppsSinceMidnightUsingEvents(context, zone)
     }

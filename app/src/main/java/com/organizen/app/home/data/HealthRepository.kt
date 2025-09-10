@@ -24,8 +24,7 @@ class HealthRepository(private val ctx: Context) {
     }
 
     /**
-     * Minute de somn din zi, CLIPATE la [start, end).
-     * (Păstrat dacă ai nevoie de varianta strict pe zi.)
+     * Minute de somn din zi, taiate la [start, end).
      */
     suspend fun readSleepMinutesClipped(start: Instant, end: Instant): Int {
         val queryStart = start.minus(Duration.ofHours(20)) // prinde sesiuni începute aseară

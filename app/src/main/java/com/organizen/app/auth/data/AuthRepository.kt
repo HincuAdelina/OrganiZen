@@ -17,10 +17,10 @@ class AuthRepository(
     }
 
     suspend fun register(name: String, email: String, password: String): Result<Unit> = try {
-        // 1) Creează contul
+        // Creează contul
         auth.createUserWithEmailAndPassword(email, password).await()
 
-        // 2) Setează displayName în profil
+        // Setează displayName în profil
         val profile = userProfileChangeRequest { displayName = name }
         auth.currentUser?.updateProfile(profile)?.await()
 

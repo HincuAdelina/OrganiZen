@@ -26,7 +26,7 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it) }
     }
 
-    // 🔹 Prinde refresh-urile trimise din aplicație
+    // Prinde refresh-urile trimise din aplicație
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
@@ -35,7 +35,7 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // 🔹 Actualizează toate instanțele widgetului
+    // Actualizeaza toate instanțele widgetului
     private fun updateAll(context: Context) {
         val mgr = AppWidgetManager.getInstance(context)
         val ids = mgr.getAppWidgetIds(ComponentName(context, UpcomingTaskWidgetProvider::class.java))
@@ -43,10 +43,10 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        // 🔹 Acțiune custom pt. refresh
+        // Acțiune custom pt. refresh
         const val ACTION_REFRESH = "com.organizen.app.widget.REFRESH"
 
-        // 🔹 Apeleaz-o din app după ce salvezi/editezi taskuri
+        // Apeleaza din app după ce salvezi/editezi taskuri
         fun requestRefresh(context: Context) {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, UpcomingTaskWidgetProvider::class.java))
@@ -83,7 +83,7 @@ class UpcomingTaskWidgetProvider : AppWidgetProvider() {
                 val due = formatDue(context, task.deadline)
                 views.setTextViewText(R.id.widget_task_deadline, context.getString(R.string.due_prefix, due))
 
-                // bulină dificultate + text
+                // bulina dificultate + text
                 val bullet = "\u25CF"
                 views.setTextViewText(R.id.widget_task_difficulty, "$bullet $diffLabel")
                 views.setTextColor(R.id.widget_task_difficulty, colorFor(task.difficulty))
